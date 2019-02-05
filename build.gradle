@@ -1,0 +1,51 @@
+buildscript {
+    
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.3.0'
+    }
+}
+
+subprojects {
+    group = 'org.stella'
+    version = '1.0-SNAPSHOT'
+    repositories {
+        mavenCentral()
+	jcenter()
+        google()
+    }
+}
+
+configure(subprojects.findAll { it.name != 'stella-droid' }) { 
+    apply plugin: 'java'
+    sourceCompatibility = 1.8
+    	dependencies {
+    	    testImplementation "junit:junit:4.12"
+    }
+}
+
+project(':stella-blue-bridge') {
+    dependencies {
+        implementation project(':stella-blue-shared')
+	implementation "net.sf.bluecove:bluecove:2.1.0"
+    }
+}
+
+project(':stella-rest-bridge') {
+    apply plugin: 'application' 	
+
+    dependencies {
+        implementation project(':stella-rest-shared')
+	implementation("org.springframework.boot:spring-boot-starter-web:2.1.2.RELEASE")
+//	implementation("org.springframework.boot:spring-boot-starter-security:2.1.2.RELEASE")
+        testImplementation("org.springframework.boot:spring-boot-starter-test:2.1.2.RELEASE")
+    }
+
+    application {
+	mainClassName = "org.stella.restbridge.StellaRestBridge"
+    }
+}
+

@@ -1,0 +1,3 @@
+rootProject.name = 'stella'
+include 'stella-droid', 'stella-rest-shared', 'stella-rest-bridge', 'stella-blue-shared', 'stella-blue-bridge'
+
