@@ -7,6 +7,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 import org.stella.droid.rest.RetrofitClientFactory;
 import org.stella.droid.rest.StellaRestClient;
@@ -26,16 +27,16 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         FloatingActionButton fab = findViewById(R.id.fab);
-        final TextView answer = findViewById(R.id.txt);
+        final EditText answer = findViewById(R.id.txt);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                new RetrofitClientFactory().createClient(StellaRestClient.class).welcome("frederic").enqueue(
+                new RetrofitClientFactory().createClient(StellaRestClient.class).say("Frederic", answer.getText().toString()).enqueue(
                         new Callback<String>() {
                             @Override
                             public void onResponse(Call<String> call, Response<String> response) {
-                                answer.setText("rest call succeeded "+response.body());
+                                answer.setText(response.body());
                             }
 
                             @Override

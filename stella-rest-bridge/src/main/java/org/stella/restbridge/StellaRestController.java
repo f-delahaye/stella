@@ -1,22 +1,14 @@
 package org.stella.restbridge;
 
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
-import org.stella.rest.StellaUserService;
+import org.springframework.web.bind.annotation.*;
+import org.stella.rest.StellaCommandService;
 
 @RestController
 public class StellaRestController {
 
-    @RequestMapping(StellaUserService.WELCOME_ANONYMOUS_COMMAND)
-    public @ResponseBody String welcome() {
-        return "Are you a new member?";
-    }
-
-    @RequestMapping(StellaUserService.WELCOME_COMMAND)
-    public @ResponseBody String welcome(@RequestHeader(StellaUserService.AUTHORIZATION_HEADER) String user) {
-        return "Welcome "+user;
+    @RequestMapping(StellaCommandService.SAY_COMMAND_URI)
+    public @ResponseBody String say(@RequestHeader(StellaCommandService.AUTHORIZATION_HEADER) String user, @PathVariable(StellaCommandService.COMMAND_PATH_VARIABLE) String command) {
+        System.out.println(user+" just said "+command);
+        return user+" just said "+command;
     }
 }
