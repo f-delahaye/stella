@@ -19,26 +19,42 @@ subprojects {
     }
 }
 
-configure(subprojects.findAll { it.name != 'stella-droid' }) { 
-    apply plugin: 'java'
-    sourceCompatibility = 1.8
-    	dependencies {
-    	    testImplementation "junit:junit:4.12"
-    }
+/*
+project(':stella-blue-shared') {
 }
 
 project(':stella-blue-bridge') {
+    apply plugin: 'java'
+    sourceCompatibility = 1.8
+
     dependencies {
         implementation project(':stella-blue-shared')
 	implementation "net.sf.bluecove:bluecove:2.1.0"
     }
 }
+*/
+
+project(':stella-ai') {
+    apply plugin: 'scala'
+    apply plugin: 'application'
+    mainClassName = 'org.stella.ai.SentenceProcessor'
+    dependencies {
+	    implementation 'org.scala-lang:scala-library:2.12.8'
+        implementation 'edu.stanford.nlp:stanford-corenlp:3.9.2'      
+    }
+}
+
+project(':stella-rest-shared') {
+    apply plugin: 'java'
+    sourceCompatibility = 1.8
+}
 
 project(':stella-rest-bridge') {
     apply plugin: 'application' 	
+    sourceCompatibility = 1.8
 
     dependencies {
-        implementation project(':stella-rest-shared')
+        implementation project(':stella-rest-shared'), project(':stella-ai')
 	implementation("org.springframework.boot:spring-boot-starter-web:2.1.2.RELEASE")
 //	implementation("org.springframework.boot:spring-boot-starter-security:2.1.2.RELEASE")
         testImplementation("org.springframework.boot:spring-boot-starter-test:2.1.2.RELEASE")
@@ -48,4 +64,3 @@ project(':stella-rest-bridge') {
 	mainClassName = "org.stella.restbridge.StellaRestBridge"
     }
 }
-
