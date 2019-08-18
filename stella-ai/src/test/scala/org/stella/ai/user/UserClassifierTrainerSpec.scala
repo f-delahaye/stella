@@ -27,6 +27,10 @@ class UserClassifierTrainerSpec
   "A UserClassifierTrainer actor" must {
 
     "send correctly formatted trained data" in {
+      // Calling subscribe is not mentioned in the current (2.5.3) version of akka, but it is in version 2.0
+      // Somehow seems necessary otherwise no message is found.
+      // Please note how the actorRef passed is testActor, not trainer
+      system.eventStream.subscribe(testActor, classOf[SendClassifierDataTraining])
        trainer ! TextMessage.Strict("cool thing=yes")
       expectMsg(SendClassifierDataTraining(List(("cool thing", "yes"))))
     }

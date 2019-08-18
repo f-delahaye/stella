@@ -25,9 +25,9 @@ object LInternauteOverviewTvProgramCrawler {
 
 private class LInternauteOverviewTvProgramCrawler(date: LocalDate, channel: String) extends Actor {
 
-  val URLDayFormatter = DateTimeFormatter.ofPattern("EEEE-dd-MMMM-yyyy", Locale.FRENCH)
-  val ProgramTimeFormatter = DateTimeFormatter.ofPattern("HH'h'mm")
-  val ProgramsPattern = "(?s)<div class=\"grid_col bu_tvprogram_logo\">.*?<div>.*?([0-9h]+).*?</div>.+?<span class=\"bu_tvprogram_typo2\">(.+?)</span>.+?<span class=\"bu_tvprogram_typo5\">(.+?)</span>".r
+  private val URLDayFormatter = DateTimeFormatter.ofPattern("EEEE-dd-MMMM-yyyy", Locale.FRENCH)
+  private val ProgramTimeFormatter = DateTimeFormatter.ofPattern("HH'h'mm")
+  private val ProgramsPattern = "(?s)<div class=\"grid_col bu_tvprogram_logo\">.*?<div>.*?([0-9h]+).*?</div>.+?<span class=\"bu_tvprogram_typo2\">(.+?)</span>.+?<span class=\"bu_tvprogram_typo5\">(.+?)</span>".r
 
   implicit val ec = context.dispatcher
 
@@ -44,7 +44,7 @@ private class LInternauteOverviewTvProgramCrawler(date: LocalDate, channel: Stri
     ProgramsPattern.findAllMatchIn(body).map(m => TvProgram(LocalTime.parse(m.group(1),ProgramTimeFormatter), channel, HtmlEscape.unescapeHtml(m.group(2).trim()), HtmlEscape.unescapeHtml(m.group(3).trim()))).toList
   }
 
-  override def receive = {
+  override def receive:  Actor.Receive = {
     case body: String => context.parent ! ProgramsFound((date, parseBody(body)))
   }
 }

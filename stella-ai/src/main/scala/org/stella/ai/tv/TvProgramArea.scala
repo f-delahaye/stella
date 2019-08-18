@@ -3,8 +3,6 @@ package org.stella.ai.tv
 import java.time.LocalDate
 
 import akka.actor.Actor
-import javax.cache.Cache
-import org.stella.ai.tv.Main.system
 import org.stella.ai.tv.TvProgramArea.CheckDates
 import org.stella.ai.tv.TvProgramCollector.{CollectPrograms, ProgramsFound}
 
@@ -22,18 +20,17 @@ object TvProgramArea {
   * If may not be working all the time but it should check on a regular basis whether or not new dates need to be handled.
   * This requires some non trivial logic, taking busy days and days off into account as well as ignoring dates already in the cache
   *
-  * @param ignite
   */
 class TvProgramArea() extends Actor {
 
-  val tvProgramCache: mutable.Map[LocalDate, List[TvProgram]] = mutable.Map[LocalDate, List[TvProgram]]()
+  private val tvProgramCache: mutable.Map[LocalDate, List[TvProgram]] = mutable.Map[LocalDate, List[TvProgram]]()
 
-  val tvProgramLoader = system.actorOf(TvProgramClassifier.props)
+  private val tvProgramLoader = context.system.actorOf(TvProgramClassifier.props())
 
   //implicit val ec = context.dispatcher
   //context.system.scheduler.schedule(0 seconds, 1 minutes, self, CheckDates())
 
-  override def receive = {
+  override def receive:  Actor.Receive = {
     case CheckDates() => checkDate(LocalDate.now())
     case ProgramsFound(programs) =>
       tvProgramCache(programs._1) = programs._2

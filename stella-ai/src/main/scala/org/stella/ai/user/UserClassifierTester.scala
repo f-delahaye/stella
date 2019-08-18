@@ -1,6 +1,6 @@
 package org.stella.ai.user
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.scaladsl.SourceQueue
 import org.stella.ai.tv.TvProgramClassifier.{AskClassifierRatingAndScore, SendUserRatingAndScores}
@@ -10,24 +10,26 @@ object UserClassifierTester {
   case class ConnectionEstablished(wsHandle: SourceQueue[Message])
   case object ConnectionDropped
 
-  def props() = {
+  def props(): Props = {
     Props(new UserClassifierTester())
   }
 }
 
-class UserClassifierTester extends Actor{
+class UserClassifierTester extends Actor with ActorLogging {
   import UserClassifierTester._
-  private var queue: SourceQueue[Message] = _
+  private var wsQueue: SourceQueue[Message] = _
 
   override def receive: Receive = {
-    case ConnectionEstablished(q) =>
-      this.queue = q
+    case ConnectionEstablished(queue) =>
+      this.wsQueue = queue
       context.system.eventStream.subscribe(self, classOf[SendUserRatingAndScores])
     // data training request/response
     // RatingAndScores request/response
-    case TextMessage.Strict(summary) =>
+    case userMessage: String if userMessage.startsWith("rating-and-scores:") =>
+      val summary = userMessage.substring("rating-and-scores:".length)
+      log.info(s"rating and scores requested for $summary")
       context.system.eventStream.publish(AskClassifierRatingAndScore(summary))
     case SendUserRatingAndScores(summary, rating, scores) =>
-      queue.offer(TextMessage.Strict(s"$summary has rating $rating with scores $scores"))
+      wsQueue.offer(TextMessage.Strict(s"$summary has rating $rating with scores $scores"))
   }
 }

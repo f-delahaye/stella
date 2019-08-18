@@ -14,11 +14,14 @@ object TvProgramClassifier {
   case class AskClassifierTvProgramsSelection(programs: List[TvProgram])
   // Message sent by classifier to client in response to a selection request
   case class SendClientTvProgramsSelection(selection: List[TvProgram])
+
+  // USER INTERACTION
   // Message sent by classifier to request user trained data
-  case class AskUserDataTraining(programs: List[String])
-  // Message sent by client in response to a user trained data request
+  case class AskUserDataTraining(programs: List[TvProgram])
+  // Message sent by user in response to a user trained data request
   case class SendClassifierDataTraining(trainedProgram: List[(String, String)])
 
+  // TESTS
   // Message sent by client to get the score of the supplied summary. This is currently intended for test purposes only
   case class AskClassifierRatingAndScore(summary: String)
   // Message sent by classifier in response to a rating and score request
@@ -45,7 +48,9 @@ protected class TvProgramClassifier extends Actor with ActorLogging {
 
   override def receive: Receive = {
     case AskClassifierTvProgramsSelection(programs) =>
-      sender() ! SendClientTvProgramsSelection(programs.filter(program => "yes".equals(classifier.classOf(programToDatum(program.summary, "")))))
+      val (selected, discarded) = programs.partition(isSelectable)
+      sender() ! SendClientTvProgramsSelection(selected)
+      context.system.eventStream.publish(AskUserDataTraining(discarded))
     case SendClassifierDataTraining(programs) =>
       programs.map { case (feature, rating) => programToDatum(feature, rating) }.foreach(trainedData.add)
       _classifier = null
@@ -57,11 +62,16 @@ protected class TvProgramClassifier extends Actor with ActorLogging {
   // ideally, classifier would be a lazy val. However:
   // - lazy are synchronous which is not needed here since we are within an actor
   // - more of an issue is that we need _classifier to be mutable. Alternate solution would be to kill the actor when a refresh of the classifier is needed but that really seems like an overkill
-  def classifier = {
+  private def classifier = {
     if (_classifier == null) {
       _classifier = cdc.makeClassifier(trainedData)
     }
     _classifier
+  }
+
+  private def isSelectable(program: TvProgram): Boolean = {
+    val programDatum = programToDatum(program.summary, "")
+    "yes".equals(classifier.classOf(programDatum)) // we could also take a score threshold into account
   }
 
   private def buildProperties() = {

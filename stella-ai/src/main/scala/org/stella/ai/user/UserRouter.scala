@@ -3,10 +3,10 @@ package org.stella.ai.user
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.http.scaladsl.server
 import akka.http.scaladsl.server.Directives._
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Sink, Source}
-
 
 import scala.concurrent.duration._
 
@@ -14,7 +14,7 @@ import scala.concurrent.duration._
 
 object UserRouter {
 
-  def route(implicit system: ActorSystem) = {
+  def route(implicit system: ActorSystem): server.Route = {
     path("classifier-training") {
       handleWebSocketMessages(getClassifierTrainerFlow(system))
     } ~
@@ -55,11 +55,12 @@ object UserRouter {
 
     val sink: Sink[Message, NotUsed] =
       Flow[Message]
+        .collect {case TextMessage.Strict(userMessage) => userMessage}
         // TODO replace with actorRefWithAck
         .to(Sink.actorRef(wsUser, ConnectionDropped)) // connect to the wsUser Actor
 
     val source: Source[Message, NotUsed] =
-      Source
+    Source
         .queue[Message](bufferSize = 10, overflowStrategy = OverflowStrategy.dropHead)
         .mapMaterializedValue { wsHandle =>
           // the wsHandle is the way to talk back to the user, our wsUser actor needs to know about this to send

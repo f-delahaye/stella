@@ -1,6 +1,6 @@
 package org.stella.ai.tv
 
-import java.time.{LocalDate, LocalTime}
+import java.time.LocalDate
 
 import akka.actor.{Actor, Props}
 import org.stella.ai.tv.TvProgramCollector.{CollectPrograms, ProgramsFound}
@@ -40,7 +40,7 @@ class TvProgramCollector extends Actor {
   }
 */
 
-  override def receive = {
+  override def receive: Actor.Receive = {
     case CollectPrograms(date) =>
       context.actorOf(LInternauteOverviewTvProgramCrawler.props(date, "histoire-tps"))
     case ProgramsFound(programs) =>
