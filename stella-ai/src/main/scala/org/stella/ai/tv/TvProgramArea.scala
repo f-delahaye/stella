@@ -25,7 +25,7 @@ class TvProgramArea() extends Actor {
 
   private val tvProgramCache: mutable.Map[LocalDate, List[TvProgram]] = mutable.Map[LocalDate, List[TvProgram]]()
 
-  private val tvProgramLoader = context.system.actorOf(TvProgramClassifier.props())
+  private val tvProgramClassifier = context.system.actorOf(TvProgramClassifier.props())
 
   //implicit val ec = context.dispatcher
   //context.system.scheduler.schedule(0 seconds, 1 minutes, self, CheckDates())

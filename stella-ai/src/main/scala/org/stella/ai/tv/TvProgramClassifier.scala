@@ -2,16 +2,16 @@ package org.stella.ai.tv
 
 import java.util.Properties
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import edu.stanford.nlp.classify.{Classifier, ColumnDataClassifier, Dataset}
-import org.stella.ai.tv.TvProgramClassifier.{AskClassifierRatingAndScore, SendClassifierDataTraining}
+import org.stella.ai.tv.TvProgramClassifier.{AskClassifierRatingAndScore, AskClassifierTvProgramsSelection, SendClassifierDataTraining}
 
 object TvProgramClassifier {
   //  https://doc.akka.io/docs/akka/current/actors.html#recommended-practices
   def props(): Props = Props(new TvProgramClassifier())
 
   // Message sent by client to classifier to request a selection off the supplied programs
-  case class AskClassifierTvProgramsSelection(programs: List[TvProgram])
+  case class AskClassifierTvProgramsSelection(replyTo: ActorRef, programs: List[TvProgram])
   // Message sent by classifier to client in response to a selection request
   case class SendClientTvProgramsSelection(selection: List[TvProgram])
 
@@ -42,14 +42,17 @@ protected class TvProgramClassifier extends Actor with ActorLogging {
 
   context.system.eventStream.subscribe(self, classOf[AskClassifierRatingAndScore])
   context.system.eventStream.subscribe(self, classOf[SendClassifierDataTraining])
+  // This is a bit confusing ... AskClassifierTvProgramsSelection will be sent as a regular message from TvProgramArea but also as an event from UserclassifierTester so classifier needs to subscribe
+  context.system.eventStream.subscribe(self, classOf[AskClassifierTvProgramsSelection])
+
 
   var _classifier: Classifier[String, String] = _
   import TvProgramClassifier._
 
   override def receive: Receive = {
-    case AskClassifierTvProgramsSelection(programs) =>
+    case AskClassifierTvProgramsSelection(replyTo, programs) =>
       val (selected, discarded) = programs.partition(isSelectable)
-      sender() ! SendClientTvProgramsSelection(selected)
+      replyTo ! SendClientTvProgramsSelection(selected)
       context.system.eventStream.publish(AskUserDataTraining(discarded))
     case SendClassifierDataTraining(programs) =>
       programs.map { case (feature, rating) => programToDatum(feature, rating) }.foreach(trainedData.add)

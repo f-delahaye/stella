@@ -29,7 +29,7 @@ protected class UserClassifierTrainer() extends Actor with ActorLogging {
       // data training request/response
     case TextMessage.Strict(trainedData) =>
       log.info(s"data training received $trainedData")
-      context.system.eventStream.publish(SendClassifierDataTraining(List(trainedData).map(_.split("=")).map{case Array(summary, rating) => (summary, rating)}))
+      context.system.eventStream.publish(SendClassifierDataTraining(trainedData.split("\n").map(_.split("=")).map{case Array(summary, rating) => (summary, rating)}.toList))
     case AskUserDataTraining(programs) =>
       log.info(s"data training requested for $programs")
       wsQueue.offer(TextMessage.Strict(programs.map(_.summary+"=").mkString("\n")))
