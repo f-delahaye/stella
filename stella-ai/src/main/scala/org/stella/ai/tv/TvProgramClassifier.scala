@@ -3,23 +3,24 @@ package org.stella.ai.tv
 import java.util.Properties
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.stream.scaladsl.SourceQueue
 import edu.stanford.nlp.classify.{Classifier, ColumnDataClassifier, Dataset}
-import org.stella.ai.tv.TvProgramClassifier.{AskClassifierRatingAndScore, AskClassifierTvProgramsSelection, SendClassifierDataTraining}
 
 object TvProgramClassifier {
   //  https://doc.akka.io/docs/akka/current/actors.html#recommended-practices
   def props(): Props = Props(new TvProgramClassifier())
 
+  case class UserTrainingConnectionEstablished(wsHandle: SourceQueue[List[String]])
+  case object UserTrainingConnectionDropped
+
   // Message sent by client to classifier to request a selection off the supplied programs
-  case class AskClassifierTvProgramsSelection(replyTo: ActorRef, programs: List[TvProgram])
+  case class AskClassifierTvProgramsSelection(programs: List[TvProgram])
   // Message sent by classifier to client in response to a selection request
   case class SendClientTvProgramsSelection(selection: List[TvProgram])
 
-  // USER INTERACTION
-  // Message sent by classifier to request user trained data
-  case class AskUserDataTraining(programs: List[TvProgram])
-  // Message sent by user in response to a user trained data request
-  case class SendClassifierDataTraining(trainedProgram: List[(String, String)])
+  // USER FEEDBACK
+  // Message sent by user in response to a user trained data request sent directly to the queue
+  case class SendClassifierDataTraining(trainedData: List[(String, String)])
 
   // TESTS
   // Message sent by client to get the score of the supplied summary. This is currently intended for test purposes only
@@ -40,26 +41,28 @@ protected class TvProgramClassifier extends Actor with ActorLogging {
   val cdc = new ColumnDataClassifier(buildProperties())
   val trainedData: Dataset[String,String] = new Dataset[String,String]()
 
-  context.system.eventStream.subscribe(self, classOf[AskClassifierRatingAndScore])
-  context.system.eventStream.subscribe(self, classOf[SendClassifierDataTraining])
-  // This is a bit confusing ... AskClassifierTvProgramsSelection will be sent as a regular message from TvProgramArea but also as an event from UserclassifierTester so classifier needs to subscribe
-  context.system.eventStream.subscribe(self, classOf[AskClassifierTvProgramsSelection])
-
-
   var _classifier: Classifier[String, String] = _
+  private var userDataTrainingConnection: Option[SourceQueue[List[String]]] = None
   import TvProgramClassifier._
 
   override def receive: Receive = {
-    case AskClassifierTvProgramsSelection(replyTo, programs) =>
-      val (selected, discarded) = programs.partition(isSelectable)
-      replyTo ! SendClientTvProgramsSelection(selected)
-      context.system.eventStream.publish(AskUserDataTraining(discarded))
+    case UserTrainingConnectionEstablished(_queue) =>
+      userDataTrainingConnection = Some(_queue)
+    case UserTrainingConnectionDropped =>
+      userDataTrainingConnection = None
+    // data training request/response
+    case AskClassifierTvProgramsSelection(programs) =>
+      val retained = programs.filter(isSelectable)
+      sender() ! SendClientTvProgramsSelection(retained)
+      // randomly select some items and send them back to user for training.
+      // it is very important that these items contain both retained and discarded programs
+      userDataTrainingConnection.fold(())(queue => queue.offer(programs.slice(0, 10).map(_.summary)))
     case SendClassifierDataTraining(programs) =>
       programs.map { case (feature, rating) => programToDatum(feature, rating) }.foreach(trainedData.add)
       _classifier = null
     case AskClassifierRatingAndScore(summary) =>
       val datum = programToDatum(summary, "")
-      context.system.eventStream.publish(SendUserRatingAndScores(summary, classifier.classOf(datum), classifier.scoresOf(datum).toString))
+      sender() ! SendUserRatingAndScores(summary, classifier.classOf(datum), classifier.scoresOf(datum).toString)
   }
 
   // ideally, classifier would be a lazy val. However:
@@ -72,9 +75,10 @@ protected class TvProgramClassifier extends Actor with ActorLogging {
     _classifier
   }
 
-  private def isSelectable(program: TvProgram): Boolean = {
+  private def isSelectable(program: TvProgram): Boolean = {    
     val programDatum = programToDatum(program.summary, "")
-    "yes".equals(classifier.classOf(programDatum)) // we could also take a score threshold into account
+// we could pass the threshold as a parameter of the message ...
+    "yes".equals(classifier.classOf(programDatum)) && classifier.scoresOf(programDatum).getCount("yes") > 0.5
   }
 
   private def buildProperties() = {

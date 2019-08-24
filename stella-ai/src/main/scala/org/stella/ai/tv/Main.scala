@@ -24,9 +24,15 @@ object Main extends App {
   implicit val ec: ExecutionContext   = system.dispatcher
 
   // Main brain area
-  val tvProgramArea = system.actorOf(Props(new TvProgramArea()))
+  private val tvProgramArea = system.actorOf(Props(new TvProgramArea()))
+  // Ideally, I'd like to have tvProgramClassifier created within TvProgramArea.
+  // but then, I don't know how to make UserRouter / Actors aware of it:
+  // - creating a new actor is not possible since by design TvProgramClassifier is expected to be a singleton
+  // - looking up its path could be possible but not encouraged by akka
+  // - only other solution would be to publish / subscribe messages between UserActor and TvProgramClassifier but that looks like an even worse evil
+  private val tvProgramClassifier = system.actorOf(TvProgramClassifier.props())
 
-  Http().bindAndHandle(UserRouter.route, "127.0.0.1", 9001).onComplete {
+  Http().bindAndHandle(UserRouter.route(tvProgramClassifier), "127.0.0.1", 9001).onComplete {
     case Success(binding) =>
       println(s"Server online at ws://${binding.localAddress.getHostName}:${binding.localAddress.getPort}\n")
 

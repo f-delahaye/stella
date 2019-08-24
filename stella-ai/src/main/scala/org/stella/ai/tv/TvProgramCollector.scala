@@ -3,10 +3,10 @@ package org.stella.ai.tv
 import java.time.LocalDate
 
 import akka.actor.{Actor, Props}
-import org.stella.ai.tv.TvProgramCollector.{CollectPrograms, ProgramsFound}
+import org.stella.ai.tv.TvProgramCollector.{CollectPrograms, ProgramsCollected}
 
 object TvProgramCollector {
-  case class ProgramsFound(programs: (LocalDate, List[TvProgram]))
+  case class ProgramsCollected(programs: (LocalDate, List[TvProgram]))
   case class CollectPrograms(date: LocalDate)
 
   //  https://doc.akka.io/docs/akka/current/actors.html#recommended-practices
@@ -29,22 +29,12 @@ class TvProgramCollector extends Actor {
       println(classifiedPrograms)
     }
   }
-
-  def classificationKey(program: (LocalTime, String, String)): Int = {
-    // TODO this should be ML based. For the time being, we only classify peint[re/ure] and religi[on/eux]
-    if (program._3.contains("peint") || program._3.contains("religi")) {
-      1;
-    } else {
-      2;
-    }
-  }
 */
-
   override def receive: Actor.Receive = {
     case CollectPrograms(date) =>
       context.actorOf(LInternauteOverviewTvProgramCrawler.props(date, "histoire-tps"))
-    case ProgramsFound(programs) =>
-      sender() ! ProgramsFound(programs) // TODO query all supported channels and aggregate them before sending back to parent
+    case ProgramsCollected(programs) =>
+      context.parent ! ProgramsCollected(programs) // TODO query all supported channels and aggregate them before sending back to parent. Ask should be used over tell
   }
 
 }

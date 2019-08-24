@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 import akka.actor.Actor
 import org.stella.ai.tv.TvProgramArea.CheckDates
-import org.stella.ai.tv.TvProgramCollector.{CollectPrograms, ProgramsFound}
+import org.stella.ai.tv.TvProgramCollector.{CollectPrograms, ProgramsCollected}
 
 import scala.collection.mutable
 
@@ -25,14 +25,12 @@ class TvProgramArea() extends Actor {
 
   private val tvProgramCache: mutable.Map[LocalDate, List[TvProgram]] = mutable.Map[LocalDate, List[TvProgram]]()
 
-  private val tvProgramClassifier = context.system.actorOf(TvProgramClassifier.props())
-
   //implicit val ec = context.dispatcher
   //context.system.scheduler.schedule(0 seconds, 1 minutes, self, CheckDates())
 
   override def receive:  Actor.Receive = {
     case CheckDates() => checkDate(LocalDate.now())
-    case ProgramsFound(programs) =>
+    case ProgramsCollected(programs) =>
       tvProgramCache(programs._1) = programs._2
 //    case LoadTvProgramClassifier.ClassifierLoaded(classifier, cdc) => this.classifier = Some(classifier);
   }
