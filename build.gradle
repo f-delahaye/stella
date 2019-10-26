@@ -3,9 +3,14 @@ buildscript {
     repositories {
         google()
         jcenter()
+        mavenCentral()
+        gradlePluginPortal()
     }
+
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.3.0'
+        // see https://plugins.gradle.org/plugin/com.lightbend.akka.grpc.gradle
+        // for the currently latest version.
+        classpath 'gradle.plugin.com.lightbend.akka.grpc:akka-grpc-gradle-plugin:0.7.2'
     }
 }
 
@@ -36,31 +41,25 @@ project(':stella-blue-bridge') {
 
 project(':stella-ai') {
     apply plugin: 'scala'
+    apply plugin: 'com.lightbend.akka.grpc.gradle'
     apply plugin: 'application'
-    mainClassName = 'org.stella.ai.SentenceProcessor'
+    mainClassName = 'org.stella.ai.tv.Main'
     dependencies {
-	    implementation 'org.scala-lang:scala-library:2.12.8'
-        implementation 'edu.stanford.nlp:stanford-corenlp:3.9.2'      
+	implementation 'org.scala-lang:scala-library:2.12.8'
+        implementation 'edu.stanford.nlp:stanford-corenlp:3.9.2'
+        implementation group: 'com.ning', name: 'async-http-client', version: '1.9.40'
+        implementation group: 'org.apache.ignite', name: 'ignite-core', version: '2.7.0'
+        implementation group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.23'
+        implementation group: 'com.typesafe.akka', name: 'akka-http_2.12',   version: '10.1.9'
+        implementation group: 'com.typesafe.akka', name: 'akka-stream_2.12', version: '2.5.23'
+        implementation group: 'org.unbescape', name: 'unbescape', version: '1.1.6.RELEASE'
+        testImplementation group: 'org.glassfish.tyrus', name: 'tyrus-server', version: '1.15'
+	testImplementation group: 'com.typesafe.akka', name: 'akka-testkit_2.12', version: '2.5.23'
+	testImplementation group: 'org.scalatest', name :'scalatest_2.12', version:'3.0.1'
+        testImplementation group: 'org.scalamock', name: 'scalamock_2.12', version: '4.4.0'
+        
     }
-}
-
-project(':stella-rest-shared') {
-    apply plugin: 'java'
-    sourceCompatibility = 1.8
-}
-
-project(':stella-rest-bridge') {
-    apply plugin: 'application' 	
-    sourceCompatibility = 1.8
-
-    dependencies {
-        implementation project(':stella-rest-shared'), project(':stella-ai')
-	implementation("org.springframework.boot:spring-boot-starter-web:2.1.2.RELEASE")
-//	implementation("org.springframework.boot:spring-boot-starter-security:2.1.2.RELEASE")
-        testImplementation("org.springframework.boot:spring-boot-starter-test:2.1.2.RELEASE")
-    }
-
-    application {
-	mainClassName = "org.stella.restbridge.StellaRestBridge"
+    akkaGrpc {
+	language = "Scala"
     }
 }
