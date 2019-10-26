@@ -1,13 +1,13 @@
 package org.stella.ai.user
 
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalTime}
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.scaladsl.SourceQueue
-import org.stella.ai.tv.{TvProgram, TvProgramCollector}
 import org.stella.ai.tv.TvProgramClassifier.{AskClassifierRatingAndScore, AskClassifierTvProgramsSelection, SendClientTvProgramsSelection, SendUserRatingAndScores}
+import org.stella.ai.tv.TvProgramCollector
 import org.stella.ai.tv.TvProgramCollector.{CollectPrograms, ProgramsCollected}
 
 object UserClassifierTester {
@@ -23,7 +23,6 @@ object UserClassifierTester {
 class UserClassifierTester(val classifier: ActorRef) extends Actor with ActorLogging {
   import UserClassifierTester._
 
-  private val format = new java.text.SimpleDateFormat("dd-MM-yyyy")
   private val collector = context.actorOf(TvProgramCollector.props)
 
   private var queue: SourceQueue[Message] = _

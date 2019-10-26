@@ -1,16 +1,15 @@
 package org.stella.ai.tv
 
-import java.util.Properties
-
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 import akka.stream.scaladsl.SourceQueue
-import edu.stanford.nlp.classify.{Classifier, ColumnDataClassifier, Dataset}
+import org.stella.ai.classifier.{RetrainableClassifier, StanfordClassifier, TextClassifier}
 
 object TvProgramClassifier {
   //  https://doc.akka.io/docs/akka/current/actors.html#recommended-practices
-  def props(): Props = Props(new TvProgramClassifier())
+  def props(classifier: TextClassifier): Props = Props(new TvProgramClassifier(classifier))
+  def props: Props = props(new StanfordClassifier(Some("src/main/resources/tv-programs")) with RetrainableClassifier)
 
-  case class UserTrainingConnectionEstablished(wsHandle: SourceQueue[List[String]])
+  case class UserTrainingConnectionEstablished(handle: SourceQueue[List[String]])
   case object UserTrainingConnectionDropped
 
   // Message sent by client to classifier to request a selection off the supplied programs
@@ -36,13 +35,10 @@ object TvProgramClassifier {
   * TvProgramClassifier is *not* an akka singleton but since it is responsible for maintaining the classifier, in effect there must be only one instance.
   *
   */
-protected class TvProgramClassifier extends Actor with ActorLogging {
+protected class TvProgramClassifier(val classifier: TextClassifier) extends Actor with ActorLogging {
 
-  val cdc = new ColumnDataClassifier(buildProperties())
-  val trainedData: Dataset[String,String] = new Dataset[String,String]()
+  var userDataTrainingConnection: Option[SourceQueue[List[String]]] = None
 
-  var _classifier: Classifier[String, String] = _
-  private var userDataTrainingConnection: Option[SourceQueue[List[String]]] = None
   import TvProgramClassifier._
 
   override def receive: Receive = {
@@ -53,48 +49,20 @@ protected class TvProgramClassifier extends Actor with ActorLogging {
     // data training request/response
     case AskClassifierTvProgramsSelection(programs) =>
       val retained = programs.filter(isSelectable)
-      sender() ! SendClientTvProgramsSelection(retained)
+      sender ! SendClientTvProgramsSelection(retained)
       // randomly select some items and send them back to user for training.
       // it is very important that these items contain both retained and discarded programs
       userDataTrainingConnection.fold(())(queue => queue.offer(programs.slice(0, 10).map(_.summary)))
     case SendClassifierDataTraining(programs) =>
-      programs.map { case (feature, rating) => programToDatum(feature, rating) }.foreach(trainedData.add)
-      _classifier = null
+      classifier.add(programs)
     case AskClassifierRatingAndScore(summary) =>
-      val datum = programToDatum(summary, "")
-      sender() ! SendUserRatingAndScores(summary, classifier.classOf(datum), classifier.scoresOf(datum).toString)
+      val (rating, score) = classifier.ratingAndScore(summary)
+      sender ! SendUserRatingAndScores(summary, rating, score.toString)
   }
 
-  // ideally, classifier would be a lazy val. However:
-  // - lazy are synchronous which is not needed here since we are within an actor
-  // - more of an issue is that we need _classifier to be mutable. Alternate solution would be to kill the actor when a refresh of the classifier is needed but that really seems like an overkill
-  private def classifier = {
-    if (_classifier == null) {
-      _classifier = cdc.makeClassifier(trainedData)
-    }
-    _classifier
-  }
-
-  private def isSelectable(program: TvProgram): Boolean = {    
-    val programDatum = programToDatum(program.summary, "")
+  private def isSelectable(program: TvProgram): Boolean = {
+    val (rating, score) = classifier.ratingAndScore(program.summary)
 // we could pass the threshold as a parameter of the message ...
-    "yes".equals(classifier.classOf(programDatum)) && classifier.scoresOf(programDatum).getCount("yes") > 0.5
+    "yes".equals(rating) && score > 0.5
   }
-
-  private def buildProperties() = {
-    val props = new Properties()
-    props.put("useClassFeature", "true")
-    props.put("displayedColumn", "1")
-    props.put("goldAnswerColumn", "0")
-    props.put("1.useNGrams", "true")
-    props.put("1.usePrefixSuffixNGrams", "true")
-    props.put("1.maxNGramLeng", "4")
-    props.put("1.minNGramLeng", "1")
-    props
-  }
-
-  private def programToDatum(feature: String, rating: String) = {
-    cdc.makeDatumFromLine(rating+"\t"+feature)
-  }
-
 }

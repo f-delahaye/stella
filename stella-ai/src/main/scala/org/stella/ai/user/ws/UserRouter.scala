@@ -1,17 +1,16 @@
-package org.stella.ai.user
+package org.stella.ai.user.ws
 
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server
-import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Directives.{handleWebSocketMessages, path}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.http.scaladsl.server.Directives._
 import org.stella.ai.tv.TvProgramClassifier.{SendClassifierDataTraining, UserTrainingConnectionDropped, UserTrainingConnectionEstablished}
-
+import org.stella.ai.user.UserClassifierTester
 import scala.concurrent.duration._
-
-// https://github.com/calvinlfer/websockets-pubsub-akka/
 
 object UserRouter {
 
