@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+//#options
+option java_multiple_files = true;
+option java_package = "org.stella.ai.user.grpc";
+option java_outer_classname = "UserServiceRPC";
+
+package user;
+
+service UserService {
+    // Client sends trained data and received untrained data that will get sent back to server as trained data.
+    // Hence this is not a classical request / response scenario but more of a Flow (as in Akka Flow)
+    rpc TrainClassifier (stream TrainedData) returns (stream UntrainedData) {}
+}
+
+
+message TrainedData {
+    string summary = 1;
+    string rating = 2;
+}
+
+message UntrainedData {
+    string summary = 1;
+}
