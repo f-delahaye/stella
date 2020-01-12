@@ -31,19 +31,19 @@ object LInternauteOverviewCrawler {
 
   def apply(): Behavior[LInternauteOverviewRequest] =
     Behaviors.receive { (_, message) =>
-        message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, parseBody(message.channel, readPage(buildURL(message.date, message.channel))))
+        message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, parseBody(message.date, message.channel, readPage(buildURL(message.date, message.channel))))
         Behaviors.empty
     }
 
   def readPage(url: String): String = {
     import java.net.{HttpURLConnection, URL}
-    val connection = (new URL(url)).openConnection().asInstanceOf[HttpURLConnection]
+    val connection = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
     connection.setConnectTimeout(5000)
     connection.setReadTimeout(2000)
     connection.setRequestMethod("GET")
     val inputStream = connection.getInputStream
     val content = Source.fromInputStream(inputStream).mkString
-    if (inputStream != null) inputStream.close
+    if (inputStream != null) inputStream.close()
     content
   }
 
@@ -61,7 +61,7 @@ object LInternauteOverviewCrawler {
     s"$dayOfWeek-$dayOfMonth-$monthOfYear-$year"
   }
 
-  private def parseBody(channel: String, body: String) : List[Program] = {
-    ProgramsPattern.findAllMatchIn(body).map(m => Program(LocalTime.parse(m.group(1),ProgramTimeFormatter), channel, HtmlEscape.unescapeHtml(m.group(2).trim()), HtmlEscape.unescapeHtml(m.group(2).trim()))).filter(_.summary != "").toList
+  private def parseBody(date: LocalDate, channel: String, body: String) : List[Program] = {
+    ProgramsPattern.findAllMatchIn(body).map(m => Program(LocalTime.parse(m.group(1),ProgramTimeFormatter).atDate(date), channel, HtmlEscape.unescapeHtml(m.group(2).trim()), HtmlEscape.unescapeHtml(m.group(2).trim()))).filter(_.summary != "").toList
   }
 }

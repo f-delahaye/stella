@@ -5,8 +5,8 @@ import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
 import akka.stream.typed.scaladsl.ActorSource
-import org.stella.brain.programs.ProgramClassifier
-import org.stella.brain.programs.ProgramClassifier.UntrainedData
+import org.stella.brain.programs.UntrainedProgramManager
+import org.stella.brain.programs.UntrainedProgramManager.UntrainedPrograms
 
 /**
   * Returns an Akka source which generates Untrained data that may be sent to user for manual classification.
@@ -19,13 +19,13 @@ import org.stella.brain.programs.ProgramClassifier.UntrainedData
 
 object UntrainedDataUserFlow {
 
-  def createSource(hoursSinceLastConnection: Long, programClassifier: ActorRef[ProgramClassifier.ProgramClassifierMessage])(implicit actorSystem: ActorSystem[Nothing]): Source[String, _] = {
-    ActorSource.actorRef[UntrainedData](PartialFunction.empty,PartialFunction.empty, 10, OverflowStrategy.dropHead)
+  def createSource(hoursSinceLastConnection: Long, untrainedProgramManager: ActorRef[UntrainedProgramManager.UntrainedProgramManagerMessage])(implicit actorSystem: ActorSystem[Nothing]): Source[String, _] = {
+    ActorSource.actorRef[UntrainedPrograms](PartialFunction.empty,PartialFunction.empty, 10, OverflowStrategy.dropHead)
       .mapConcat(_.untrainedData)// extract list from message
       .map(_._1) // extract summary from data
       .mapMaterializedValue(
         actorRef => {
-          programClassifier ! ProgramClassifier.UntrainedDataRequest(hoursSinceLastConnection, actorRef)
+          untrainedProgramManager ! UntrainedProgramManager.UntrainedProgramRequest(hoursSinceLastConnection, actorRef)
           actorSystem.eventStream ! EventStream.Subscribe(actorRef)
         })
 

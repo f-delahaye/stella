@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Sink
 import io.rsocket.transport.netty.server.TcpServerTransport
 import io.rsocket.util.DefaultPayload
 import io.rsocket.{AbstractRSocket, Payload, RSocketFactory}
-import org.stella.brain.programs.ProgramClassifier.ProgramClassifierMessage
+import org.stella.brain.programs.UntrainedProgramManager.UntrainedProgramManagerMessage
 import reactor.core.publisher.{Flux, Mono}
 
 
@@ -22,12 +22,12 @@ import reactor.core.publisher.{Flux, Mono}
   */
 object RSocketUserManager {
 
-  def apply(implicit programClassifier: ActorRef[ProgramClassifierMessage], actorSystem: ActorSystem[Any]) = {
+  def apply(implicit untrainedProgramManager: ActorRef[UntrainedProgramManagerMessage], actorSystem: ActorSystem[Any]) = {
     RSocketFactory.receive()
       .acceptor(((setup, sendingSocket) => Mono.just(
         new AbstractRSocket() {
           override def requestStream(payload: Payload): Flux[Payload] = {
-            Flux.from(UntrainedDataUserFlow.createSource(24, programClassifier)
+            Flux.from(UntrainedDataUserFlow.createSource(24, untrainedProgramManager)
               .map(DefaultPayload.create)
               .runWith(Sink.asPublisher(false)))
           }

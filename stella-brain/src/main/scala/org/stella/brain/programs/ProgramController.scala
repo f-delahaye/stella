@@ -9,9 +9,8 @@ import akka.actor.typed.scaladsl.Behaviors
  * - Calls relevant actors to collect data
  * - Passes collected data to the classifier as well as to the event stream where they may be picked up by any user connection sitting there
  */
-object ProgramArea {
+object ProgramController {
 
-  def apply() =
-    Behaviors.setup(context =>
-    )
+  def apply() = {}
+   // Behaviors.setup(context => )
 }

@@ -1,0 +1,7 @@
+useClassFeature=true
+displayedColumn=1
+goldAnswerColumn=0
+1.useNGrams=true
+1.usePrefixSuffixNGrams=true
+1.maxNGramLeng=4
+1.minNGramLeng=1

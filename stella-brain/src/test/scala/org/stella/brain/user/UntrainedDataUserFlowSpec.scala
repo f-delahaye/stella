@@ -7,8 +7,8 @@ import akka.stream.scaladsl.Sink
 import org.junit.runner.RunWith
 import org.scalatest.WordSpecLike
 import org.scalatestplus.junit.JUnitRunner
-import org.stella.brain.programs.ProgramClassifier
-import org.stella.brain.programs.ProgramClassifier.{ProgramClassifierMessage, Untrained, UntrainedData, UntrainedDataNotification}
+import org.stella.brain.programs.UntrainedProgramManager
+import org.stella.brain.programs.UntrainedProgramManager.{Untrained, UntrainedProgramManagerMessage, UntrainedProgramNotification, UntrainedPrograms}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
@@ -27,10 +27,10 @@ class UntrainedDataUserFlowSpec extends ScalaTestWithActorTestKit with WordSpecL
   "UntrainedDataUser source" must {
 
     "publish initial data to user" in {
-      val classifier = testKit.spawn(ProgramClassifier())
+      val classifier = testKit.spawn(UntrainedProgramManager())
 
       val untrainedData = List(("initialData", "NotCompletedYet"))
-      classifier ! UntrainedDataNotification(untrainedData)
+      classifier ! UntrainedProgramNotification(untrainedData)
 
       val source = UntrainedDataUserFlow.createSource(10, classifier)
       val future = source.take(1).runWith(Sink.seq)
@@ -38,14 +38,15 @@ class UntrainedDataUserFlowSpec extends ScalaTestWithActorTestKit with WordSpecL
     }
 
     "publish newly collected data to user" in {
-      val classifier = testKit.createTestProbe[ProgramClassifierMessage]().ref
+      val classifier = testKit.createTestProbe[UntrainedProgramManagerMessage]().ref
       val sinkProbe = testKit.createTestProbe[Seq[String]]
 
       val source = UntrainedDataUserFlow.createSource(10, classifier)
       pipeTo(source.take(1).runWith(Sink.seq), sinkProbe.ref)
 
       val untrainedData = List(("newData", "NotCompletedYet"))
-      system.eventStream ! EventStream.Publish(UntrainedData(untrainedData))
+//      system.eventStream ! EventStream.Publish(UntrainedData(untrainedData))
+      UntrainedProgramManager.publishToEventStream(system, untrainedData)
 
       sinkProbe.expectMessage(1.second, Vector("newData"))
     }

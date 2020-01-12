@@ -1,6 +1,6 @@
 package org.stella.brain.programs
 
-import java.time.LocalTime
+import java.time.LocalDateTime
 
-case class Program(time: LocalTime, channel: String, title: String, summary: String) {
+case class Program(time: LocalDateTime, channel: String, title: String, summary: String) {
 }

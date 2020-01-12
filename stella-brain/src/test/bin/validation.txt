@@ -1,0 +1,4 @@
+class	item
+class	bar
+class2	foo
+na	dummy

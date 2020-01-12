@@ -1,0 +1,3 @@
+java -cp ~/.gradle/caches/modules-2/files-2.1/edu.stanford.nlp/stanford-corenlp/3.9.2/c4e832ca57171b1b4de347d24996b69a0d8166c5/stanford-corenlp-3.9.2.jar edu.stanford.nlp.classify.ColumnDataClassifier -prop stella.props -loadClassifier ../resources/1-item.ser.gz -testFile validation.txt
+ echo "========================"
+ java -cp ~/.gradle/caches/modules-2/files-2.1/edu.stanford.nlp/stanford-corenlp/3.9.2/c4e832ca57171b1b4de347d24996b69a0d8166c5/stanford-corenlp-3.9.2.jar edu.stanford.nlp.classify.ColumnDataClassifier -prop stella.props -loadClassifier ../resources/3-items.ser.gz -testFile validation.txt
