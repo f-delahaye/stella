@@ -10,7 +10,7 @@ import akka.actor.typed.{ActorRef, Behavior}
   */
 object ProgramCollector {
 
-  private val TV_CHANNELS = List("histoire-tps")
+  val TV_CHANNELS = List("histoire-tps")
 
   sealed trait ProgramCollectorMessage
   final case class ProgramsByDateRequest(date: LocalDate, replyTo: ActorRef[ProgramsByDate]) extends ProgramCollectorMessage
@@ -18,38 +18,28 @@ object ProgramCollector {
 
   final case class ProgramsByDate(date: LocalDate, programs: List[Program])
 
-  def apply(): Behavior[ProgramCollectorMessage] =
+  def forTv() = apply(TV_CHANNELS)
+
+  def apply(channels: List[String]) =
+    handle(channels, null, null)
+
+  def handle(channels: List[String], programs: List[Program], replyTo: ActorRef[ProgramsByDate]): Behavior[ProgramCollectorMessage] =
     Behaviors.setup { context =>
       Behaviors.receiveMessage {
-        case request: ProgramsByDateRequest =>
+        case ProgramsByDateRequest(date, replyTo) =>
           val adapter = context.messageAdapter[LInternauteOverviewCrawler.LInternauteOverviewTvPrograms](response => ProgramsByDateAndChannelAdapted(response.date, response.channel, response.programs))
-          TV_CHANNELS.foreach(channel =>
-            context.spawn(LInternauteOverviewCrawler(), "crawler") ! LInternauteOverviewCrawler.LInternauteOverviewRequest(request.date, channel, adapter)
+          channels.foreach(channel =>
+            context.spawn(LInternauteOverviewCrawler(), s"crawler for $channel") ! LInternauteOverviewCrawler.LInternauteOverviewRequest(date, channel, adapter)
           )
-          handle(TV_CHANNELS, List.empty, request.date, request.replyTo).asInstanceOf
-      }
-    }
-
-/*
-  def handle(channels: List[String], programs: List[Program], date: LocalDate, replyTo: ActorRef[CollectedTvProgramsByDate]): Behavior[ProgramCollectorMessage] =
-    if (channels.isEmpty) {
-      replyTo ! CollectedTvProgramsByDate(date, programs)
-      Behaviors.empty
-    } else {
-      Behaviors.receiveMessage {
-        case collectedPrograms: CollectedTvProgramsByDateAndChannelAdapter =>
-          handle(channels.diff(List(collectedPrograms.channel)), programs:::collectedPrograms.programs, date, replyTo)
-      }
-    }
-*/
-
-  def handle(channels: List[String], programs: List[Program], date: LocalDate, replyTo: ActorRef[ProgramsByDate]): Behavior[ProgramsByDateAndChannelAdapted] =
-    if (channels.isEmpty) {
-      replyTo ! ProgramsByDate(date, programs)
-      Behaviors.empty
-    } else {
-      Behaviors.receive { (_, message) =>
-          handle(channels.diff(List(message.channel)), programs:::message.programs, date, replyTo)
+          handle(channels, List.empty, replyTo)
+        case ProgramsByDateAndChannelAdapted(date, channel, progs) =>
+          val newPrograms = programs:::progs
+          if (channels.size == 1) {
+            replyTo ! ProgramsByDate(date, newPrograms)
+            Behaviors.stopped
+          } else {
+            handle(channels.diff(List(channel)), newPrograms, replyTo)
+          }
       }
     }
 }

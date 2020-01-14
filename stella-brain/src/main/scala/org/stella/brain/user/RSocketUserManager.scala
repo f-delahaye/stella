@@ -22,7 +22,7 @@ import reactor.core.publisher.{Flux, Mono}
   */
 object RSocketUserManager {
 
-  def apply(implicit untrainedProgramManager: ActorRef[UntrainedProgramManagerMessage], actorSystem: ActorSystem[Any]) = {
+  def apply(implicit untrainedProgramManager: ActorRef[UntrainedProgramManagerMessage], actorSystem: ActorSystem[Nothing]) = {
     RSocketFactory.receive()
       .acceptor(((setup, sendingSocket) => Mono.just(
         new AbstractRSocket() {

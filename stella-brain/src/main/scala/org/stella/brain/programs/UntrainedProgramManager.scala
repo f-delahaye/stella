@@ -26,25 +26,25 @@ import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 object UntrainedProgramManager {
 
   sealed trait UntrainedProgramManagerMessage
-  type Untrained = (String, String) // text, NotUsed
+  type Untrained = String // only the summary is needed to train untrained data.
 
   // Client issuing a request to get all untrained data that this manager knows about since the specified timestamp.
-  final case class UntrainedProgramRequest(since: Long, replyTo: ActorRef[UntrainedPrograms]) extends UntrainedProgramManagerMessage
+  final case class UntrainedProgramsRequest(since: Long, replyTo: ActorRef[UntrainedPrograms]) extends UntrainedProgramManagerMessage
 
   // client notifying this classifier that new untrained data have been collected
-  final case class UntrainedProgramNotification(untrainedData: List[Untrained]) extends UntrainedProgramManagerMessage
+  final case class UntrainedProgramsNotification(untrainedPrograms: List[Untrained]) extends UntrainedProgramManagerMessage
 
-  final case class UntrainedPrograms(untrainedData: List[Untrained])
+  final case class UntrainedPrograms(untrainedPrograms: List[Untrained])
 
-  private def handle(untrainedData: List[Untrained]): Behavior[UntrainedProgramManagerMessage] =
+  private def handle(untrainedPrograms: List[Untrained]): Behavior[UntrainedProgramManagerMessage] =
     Behaviors.setup { context =>
       Behaviors.receiveMessage {
-        case UntrainedProgramRequest(since, replyTo) =>
-          replyTo ! UntrainedPrograms(untrainedData)
+        case UntrainedProgramsRequest(since, replyTo) =>
+          replyTo ! UntrainedPrograms(untrainedPrograms)
           Behaviors.same
-        case UntrainedProgramNotification(newUntrainedData) =>
-          publishToEventStream(context.system, newUntrainedData)
-          handle(untrainedData ::: newUntrainedData)
+        case UntrainedProgramsNotification(newUntrainedPrograms) =>
+          publishToEventStream(context.system, newUntrainedPrograms)
+          handle(untrainedPrograms ::: newUntrainedPrograms)
       }
     }
 

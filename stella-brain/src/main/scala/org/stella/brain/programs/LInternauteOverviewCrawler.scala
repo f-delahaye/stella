@@ -29,11 +29,10 @@ object LInternauteOverviewCrawler {
   final case class LInternauteOverviewRequest(date: LocalDate, channel: String, replyTo: ActorRef[LInternauteOverviewTvPrograms])
   final case class LInternauteOverviewTvPrograms(date: LocalDate, channel: String, programs: List[Program])
 
-  def apply(): Behavior[LInternauteOverviewRequest] =
-    Behaviors.receive { (_, message) =>
-        message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, parseBody(message.date, message.channel, readPage(buildURL(message.date, message.channel))))
-        Behaviors.empty
-    }
+  def apply() =  Behaviors.receive[LInternauteOverviewRequest] { (_, message) =>
+    message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, parseBody(message.date, message.channel, readPage(buildURL(message.date, message.channel))))
+    Behaviors.stopped
+  }
 
   def readPage(url: String): String = {
     import java.net.{HttpURLConnection, URL}

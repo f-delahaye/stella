@@ -21,11 +21,10 @@ object UntrainedDataUserFlow {
 
   def createSource(hoursSinceLastConnection: Long, untrainedProgramManager: ActorRef[UntrainedProgramManager.UntrainedProgramManagerMessage])(implicit actorSystem: ActorSystem[Nothing]): Source[String, _] = {
     ActorSource.actorRef[UntrainedPrograms](PartialFunction.empty,PartialFunction.empty, 10, OverflowStrategy.dropHead)
-      .mapConcat(_.untrainedData)// extract list from message
-      .map(_._1) // extract summary from data
+      .mapConcat(_.untrainedPrograms)// extract list from message
       .mapMaterializedValue(
         actorRef => {
-          untrainedProgramManager ! UntrainedProgramManager.UntrainedProgramRequest(hoursSinceLastConnection, actorRef)
+          untrainedProgramManager ! UntrainedProgramManager.UntrainedProgramsRequest(hoursSinceLastConnection, actorRef)
           actorSystem.eventStream ! EventStream.Subscribe(actorRef)
         })
 

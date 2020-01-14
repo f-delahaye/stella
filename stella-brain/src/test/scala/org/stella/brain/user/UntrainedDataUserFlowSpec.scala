@@ -1,18 +1,17 @@
 package org.stella.brain.user
 
-import akka.actor.typed.ActorRef
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import akka.actor.typed.eventstream.EventStream
+import akka.actor.typed.ActorRef
 import akka.stream.scaladsl.Sink
 import org.junit.runner.RunWith
 import org.scalatest.WordSpecLike
 import org.scalatestplus.junit.JUnitRunner
 import org.stella.brain.programs.UntrainedProgramManager
-import org.stella.brain.programs.UntrainedProgramManager.{Untrained, UntrainedProgramManagerMessage, UntrainedProgramNotification, UntrainedPrograms}
+import org.stella.brain.programs.UntrainedProgramManager.{UntrainedProgramManagerMessage, UntrainedProgramsNotification}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
 
 // this test requires eventBus, an ActorSource, not sure this may be done with synchronous style
@@ -29,8 +28,8 @@ class UntrainedDataUserFlowSpec extends ScalaTestWithActorTestKit with WordSpecL
     "publish initial data to user" in {
       val classifier = testKit.spawn(UntrainedProgramManager())
 
-      val untrainedData = List(("initialData", "NotCompletedYet"))
-      classifier ! UntrainedProgramNotification(untrainedData)
+      val untrainedData = List("initialData")
+      classifier ! UntrainedProgramsNotification(untrainedData)
 
       val source = UntrainedDataUserFlow.createSource(10, classifier)
       val future = source.take(1).runWith(Sink.seq)
@@ -44,7 +43,7 @@ class UntrainedDataUserFlowSpec extends ScalaTestWithActorTestKit with WordSpecL
       val source = UntrainedDataUserFlow.createSource(10, classifier)
       pipeTo(source.take(1).runWith(Sink.seq), sinkProbe.ref)
 
-      val untrainedData = List(("newData", "NotCompletedYet"))
+      val untrainedData = List("newData")
 //      system.eventStream ! EventStream.Publish(UntrainedData(untrainedData))
       UntrainedProgramManager.publishToEventStream(system, untrainedData)
 

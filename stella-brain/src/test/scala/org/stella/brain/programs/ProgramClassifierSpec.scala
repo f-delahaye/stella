@@ -3,26 +3,21 @@ package org.stella.brain.programs
 import java.time.LocalDateTime
 import java.util.Collections
 
-import akka.actor.testkit.typed.scaladsl.{ActorTestKit, BehaviorTestKit}
+import akka.actor.testkit.typed.scaladsl.{ActorTestKit, BehaviorTestKit, ScalaTestWithActorTestKit}
 import edu.stanford.nlp.classify.{Classifier, ColumnDataClassifier, Dataset, GeneralDataset}
-import edu.stanford.nlp.io.IOUtils
 import edu.stanford.nlp.ling.BasicDatum
 import edu.stanford.nlp.stats.Counter
 import org.junit.runner.RunWith
-import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.mockito.ArgumentMatchers
+import org.mockito.ArgumentMatchers._
+import org.mockito.Mockito._
+import org.scalatest.WordSpecLike
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import org.stella.brain.programs.ProgramClassifier.ProgramsClassification
-import org.mockito.Mockito._
-import org.mockito.ArgumentMatchers._
-import org.mockito.verification.VerificationMode
 
 @RunWith(classOf[JUnitRunner])
-class ProgramClassifierSpec extends WordSpec
-  with BeforeAndAfterAll
-  with Matchers
-  with MockitoSugar {
+class ProgramClassifierSpec extends ScalaTestWithActorTestKit with WordSpecLike with MockitoSugar {
 
   "program classifier" must {
 
