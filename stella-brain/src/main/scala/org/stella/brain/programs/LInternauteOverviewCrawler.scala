@@ -30,7 +30,8 @@ object LInternauteOverviewCrawler {
   final case class LInternauteOverviewTvPrograms(date: LocalDate, channel: String, programs: List[Program])
 
   def apply() =  Behaviors.receive[LInternauteOverviewRequest] { (_, message) =>
-    message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, parseBody(message.date, message.channel, readPage(buildURL(message.date, message.channel))))
+    val programs = parseBody(message.date, message.channel, readPage(buildURL(message.date, message.channel)))
+    message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, programs)
     Behaviors.stopped
   }
 
@@ -60,7 +61,6 @@ object LInternauteOverviewCrawler {
     s"$dayOfWeek-$dayOfMonth-$monthOfYear-$year"
   }
 
-  private def parseBody(date: LocalDate, channel: String, body: String) : List[Program] = {
+  private def parseBody(date: LocalDate, channel: String, body: String) : List[Program] =
     ProgramsPattern.findAllMatchIn(body).map(m => Program(LocalTime.parse(m.group(1),ProgramTimeFormatter).atDate(date), channel, HtmlEscape.unescapeHtml(m.group(2).trim()), HtmlEscape.unescapeHtml(m.group(2).trim()))).filter(_.summary != "").toList
-  }
 }

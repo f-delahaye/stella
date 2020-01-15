@@ -29,17 +29,16 @@ object ClassifiedProgramManager {
     handle(Map.empty)
 
   private def handle(classified: Map[LocalDate, List[Classified]]): Behavior[ClassifiedProgramManagerMessage] =
-    Behaviors.setup { context =>
       Behaviors.receiveMessage {
         case ClassifiedProgramsNotification(newClassified) =>
           val newClassifiedMap: Map[LocalDate, List[Classified]] = newClassified.groupBy(_._1.time.toLocalDate)
           // WATCH OUT!
           // Map.++ overrides any existing value so if a given local date exists both in classified and newClassified,
           // the latter will override any programs from the former.
+          // TODO the resulting map should be bound to keep only a few days worth of data
           handle(classified++newClassifiedMap)
         case ClassifiedProgramsRequest(date, replyTo) =>
           replyTo ! ClassifiedPrograms(classified(date))
           Behaviors.same
-      }
     }
 }

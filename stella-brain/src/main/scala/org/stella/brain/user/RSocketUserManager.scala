@@ -35,9 +35,8 @@ object RSocketUserManager {
       )))
       .transport(TcpServerTransport.create(7878))
       .start()
-      .block()
-      .onClose()
-      .block()
+      // TODO not clear if this flavor of subscribe or one with a consumer and/or error handler should be used
+      .subscribe()
   }
 }
 

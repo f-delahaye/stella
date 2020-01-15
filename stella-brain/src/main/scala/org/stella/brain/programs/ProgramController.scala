@@ -24,7 +24,9 @@ import scala.concurrent.duration._
  * - ProgramClassifier
  * - UntrainedProgramManager
  * - ClassifiedProgramManager
- * In addition, it also creates a rSocket connection to send untrained data to & receive untrained data from user.
+ *
+ * Please note, for the whole system to work, an rSocket connection to send untrained data to & receive untrained data from user
+ * should be created by the main class at the same time as this controller using RSocketUserManager
  */
 // ideally, there would be one ProgramClassifier and one UntrainedProgramManager per client, however i don't know how to have one rsocket connection per user.
 object ProgramController {
@@ -34,11 +36,17 @@ object ProgramController {
   final case class ProgramsByDateAdapted(date: LocalDate, programs: List[Program]) extends ProgramControllerMessage
   final case class ProgramsClassificationAdapted(classifiedPrograms: List[(Program, ClassAndScore)]) extends ProgramControllerMessage
 
-/*
-val programClassifier = context.spawn(ProgramClassifier(), "ProgramClassifier")
-val untrainedProgramManager = context.spawn(UntrainedProgramManager(), "UntrainedProgramManager")
-val classifiedProgramManager = context.spawn(ClassifiedProgramManager(), "ClassifiedProgramManager")
-*/
+  /**
+   * Creates a new ProgramController.
+   * Only one instance per ActorSystem is expected so this actor should be spawned by the main program guardian.
+   *
+   * There are 2 main reasons why some actors are passed in as a parameter, and not spawned by ProgramController itself:
+   * - they may be used by other components. Typically, untrainedProgramManager will also be used by UserManager.
+   * - mocks may be passed in tests. This is especially useful to test eventStream.
+   *
+   * Supervision wise, it doesn't look wrong either to have the main program guardian as the parent of these actors, rather than ProgramController (as would be the case if they were spawned in here).
+   *
+   */
   def apply(programClassifier: ActorRef[ProgramClassifierMessage], untrainedProgramManager: ActorRef[UntrainedProgramManagerMessage], classifiedProgramManager: ActorRef[ClassifiedProgramManagerMessage], eventStream: ActorRef[EventStream.Command]): Behavior[ProgramControllerMessage] = {
     Behaviors.setup { context =>
       //RSocketUserManager(untrainedProgramManager, context.system)
@@ -46,7 +54,7 @@ val classifiedProgramManager = context.spawn(ClassifiedProgramManager(), "Classi
         case ProgramByDateTick =>
           val date = LocalDate.now
           val adapter = context.messageAdapter[ProgramCollector.ProgramsByDate](response => ProgramsByDateAdapted(response.date, response.programs))
-          context.spawn(ProgramCollector.forTv(), "Collector on " + date) ! ProgramCollector.ProgramsByDateRequest(date, adapter)
+          context.spawn(ProgramCollector.forTv(), "ProgramCollector") ! ProgramCollector.ProgramsByDateRequest(date, adapter)
           Behaviors.same
         case ProgramsByDateAdapted(date, programs) =>
           val programsClassificationAdapter = context.messageAdapter[ProgramClassifier.ProgramsClassification](response => ProgramsClassificationAdapted(response.classifications))

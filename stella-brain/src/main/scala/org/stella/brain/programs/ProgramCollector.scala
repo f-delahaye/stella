@@ -29,7 +29,7 @@ object ProgramCollector {
         case ProgramsByDateRequest(date, replyTo) =>
           val adapter = context.messageAdapter[LInternauteOverviewCrawler.LInternauteOverviewTvPrograms](response => ProgramsByDateAndChannelAdapted(response.date, response.channel, response.programs))
           channels.foreach(channel =>
-            context.spawn(LInternauteOverviewCrawler(), s"crawler for $channel") ! LInternauteOverviewCrawler.LInternauteOverviewRequest(date, channel, adapter)
+            context.spawn(LInternauteOverviewCrawler(), "LInternauteCrawler") ! LInternauteOverviewCrawler.LInternauteOverviewRequest(date, channel, adapter)
           )
           handle(channels, List.empty, replyTo)
         case ProgramsByDateAndChannelAdapted(date, channel, progs) =>
