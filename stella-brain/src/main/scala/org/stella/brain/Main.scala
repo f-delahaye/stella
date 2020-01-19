@@ -1,20 +1,25 @@
 package org.stella.brain
 
 import akka.NotUsed
-import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import org.stella.brain.programs.{ClassifiedProgramManager, ProgramClassifier, ProgramController, ProgramGuardian, UntrainedProgramManager}
+import akka.actor.typed.{ActorSystem, Behavior}
+import com.typesafe.config.ConfigFactory
+import org.stella.brain.programs.ProgramMain
+import org.stella.brain.user.RSocketServer
 
 object Main {
 
   def apply(): Behavior[NotUsed] =
     Behaviors.setup { context =>
-      // Not clear if there should be one instance of the following actors per ActorSystem, or one per user...
-      context.spawn(ProgramGuardian(), "ProgramGuardian")
+      context.spawn(ProgramMain(RSocketServer), "ProgramGuardian")
       Behaviors.empty
     }
 
   def main(args: Array[String]): Unit = {
-    ActorSystem(Main(), "StellaBrain")
+    val testMode = args.size > 0 && args(0).equalsIgnoreCase("test")
+    val conf = ConfigFactory
+      .parseString(if (testMode) "stella.brain.test=true" else "stella.brain.test=false")
+      .withFallback(ConfigFactory.defaultApplication())
+    ActorSystem(Main(), "StellaBrain", conf)
   }
 }

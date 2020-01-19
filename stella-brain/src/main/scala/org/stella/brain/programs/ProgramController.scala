@@ -49,7 +49,6 @@ object ProgramController {
    */
   def apply(programClassifier: ActorRef[ProgramClassifierMessage], untrainedProgramManager: ActorRef[UntrainedProgramManagerMessage], classifiedProgramManager: ActorRef[ClassifiedProgramManagerMessage], eventStream: ActorRef[EventStream.Command]): Behavior[ProgramControllerMessage] = {
     Behaviors.setup { context =>
-      //RSocketUserManager(untrainedProgramManager, context.system)
       Behaviors.receiveMessage {
         case ProgramByDateTick =>
           val date = LocalDate.now

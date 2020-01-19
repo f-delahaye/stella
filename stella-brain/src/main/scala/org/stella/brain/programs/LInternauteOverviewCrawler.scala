@@ -1,10 +1,12 @@
 package org.stella.brain.programs
 
+import java.io.File
+import java.net.{HttpURLConnection, URL, URLConnection}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalTime}
 
-import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.scaladsl.Behaviors
 import org.unbescape.html.HtmlEscape
 
 import scala.io.Source
@@ -29,27 +31,33 @@ object LInternauteOverviewCrawler {
   final case class LInternauteOverviewRequest(date: LocalDate, channel: String, replyTo: ActorRef[LInternauteOverviewTvPrograms])
   final case class LInternauteOverviewTvPrograms(date: LocalDate, channel: String, programs: List[Program])
 
-  def apply() =  Behaviors.receive[LInternauteOverviewRequest] { (_, message) =>
-    val programs = parseBody(message.date, message.channel, readPage(buildURL(message.date, message.channel)))
+  def apply(): Behavior[LInternauteOverviewRequest] =  Behaviors.receive[LInternauteOverviewRequest] { (context, message) =>
+    val testMode = context.system.settings.config.getBoolean("stella.brain.test")
+    val programs = parseBody(message.date, message.channel, readPage(if (testMode) buildTestURLConnection(message.date, message.channel) else buildHttpURLConnection(message.date, message.channel)))
     message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, programs)
     Behaviors.stopped
   }
 
-  def readPage(url: String): String = {
-    import java.net.{HttpURLConnection, URL}
+  // todo move buildHttpUrl / buildTestURLConnection to an implicit variable
+  private def buildHttpURLConnection(date: LocalDate, channel: String): HttpURLConnection = {
+    val formattedDate = buildDate(date)
+    val url = s"https://www.linternaute.com/television/programme-$channel-$formattedDate/"
     val connection = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
     connection.setConnectTimeout(5000)
     connection.setReadTimeout(2000)
     connection.setRequestMethod("GET")
+    connection
+  }
+
+  private def buildTestURLConnection(date: LocalDate, channel: String): URLConnection = {
+    new File(s"stella-brain/src/test/resources/programmes/$channel-2020-01-19.html/").toURI.toURL.openConnection()
+  }
+
+  private def readPage(connection: URLConnection) = {
     val inputStream = connection.getInputStream
     val content = Source.fromInputStream(inputStream).mkString
     if (inputStream != null) inputStream.close()
     content
-  }
-
-  private def buildURL(date: LocalDate, channel: String): String = {
-    val formattedDate = buildDate(date)
-    s"https://www.linternaute.com/television/programme-$channel-$formattedDate/"    
   }
 
   // DateTimeFormatter.ofPattern("EEEE-dd-MMMM-yyyy", Locale.FRENCH) ALMOST does the trick but it generates some months with an accent e.g. août when linternaute expects aout
