@@ -2,10 +2,10 @@ package org.stella.brain.programs
 
 import akka.NotUsed
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.{ActorSystem, Behavior}
 import akka.stream.scaladsl.Sink
-import io.rsocket.{AbstractRSocket, Payload}
 import io.rsocket.util.DefaultPayload
+import io.rsocket.{AbstractRSocket, Payload}
 import org.stella.brain.user.{RSocketServer, UntrainedDataUserFlow}
 import reactor.core.publisher.Flux
 
@@ -18,7 +18,6 @@ object ProgramMain {
 
   def apply(server: RSocketServer): Behavior[NotUsed] =
     Behaviors.setup { context =>
-
       implicit val actorSystem: ActorSystem[Nothing] = context.system
 
       // Not clear if there should be one instance of the following actors per ActorSystem, or one per user...
@@ -36,6 +35,7 @@ object ProgramMain {
 
       server.addRoute("program.untrained", programTrainingRSocket())
       //TODO observe untrainedProgramManager and remove route upon its termination
+
      programController ! ProgramController.ProgramByDateTick
 
       Behaviors.empty

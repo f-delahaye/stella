@@ -29,7 +29,7 @@ class ProgramControllerSpec extends ScalaTestWithActorTestKit with WordSpecLike 
       // which  while functionally equivalent to the one actually used at runtime, is not ===.
 
       testController.expectEffectType[MessageAdapter[ProgramCollector.ProgramsByDate, ProgramsByDateAdapted]]
-      testController.expectEffectPF{case Spawned(_, name, _) if name == "Collector on " + LocalDate.now() =>}
+      testController.expectEffectPF{case Spawned(_, name, _) if name == "ProgramCollector" =>}
       // expectEffectxxx polls effects from an internal queue ... so at this point we want to validate that there's no effects that we didn't expect.
       assert(!testController.hasEffects())
     }

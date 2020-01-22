@@ -1,12 +1,12 @@
 package org.stella.brain.programs
 
-import java.io.File
 import java.net.{HttpURLConnection, URL, URLConnection}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalTime}
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
+import org.stella.brain.app.StellaConfig
 import org.unbescape.html.HtmlEscape
 
 import scala.io.Source
@@ -18,6 +18,10 @@ import scala.io.Source
   *
   */
 object LInternauteOverviewCrawler {
+
+  type LInternauteUrlConnectionProvider = (LocalDate, String) => URLConnection
+
+  private val defaultUrlConnectionProvider: LInternauteUrlConnectionProvider = buildHttpURLConnection
 
   private val DAYS_OF_WEEK = Array("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
   private val MONTHS_OF_YEAR = Array("janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre")
@@ -31,14 +35,20 @@ object LInternauteOverviewCrawler {
   final case class LInternauteOverviewRequest(date: LocalDate, channel: String, replyTo: ActorRef[LInternauteOverviewTvPrograms])
   final case class LInternauteOverviewTvPrograms(date: LocalDate, channel: String, programs: List[Program])
 
-  def apply(): Behavior[LInternauteOverviewRequest] =  Behaviors.receive[LInternauteOverviewRequest] { (context, message) =>
-    val testMode = context.system.settings.config.getBoolean("stella.brain.test")
-    val programs = parseBody(message.date, message.channel, readPage(if (testMode) buildTestURLConnection(message.date, message.channel) else buildHttpURLConnection(message.date, message.channel)))
+  def apply(): Behavior[LInternauteOverviewRequest] = apply(StellaConfig.getLInternauteUrlConnectionProvider)
+  /**
+   * If a non empty urlConnectionProvider is supplied, it will be used to load a page. This is useful for unit & live testing
+   * If empty is supplied, a default provider will be used that load the page from the Linternaute web site
+   *
+   */
+  def apply(urlConnectionProvider: Option[LInternauteUrlConnectionProvider]): Behavior[LInternauteOverviewRequest] =  Behaviors.receive[LInternauteOverviewRequest] { (context, message) =>
+    val connection = urlConnectionProvider.getOrElse(defaultUrlConnectionProvider).apply(message.date, message.channel)
+    context.log.info("Reading page from {}", connection)
+    val programs = parseBody(message.date, message.channel, readPage(connection))
     message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, programs)
     Behaviors.stopped
   }
 
-  // todo move buildHttpUrl / buildTestURLConnection to an implicit variable
   private def buildHttpURLConnection(date: LocalDate, channel: String): HttpURLConnection = {
     val formattedDate = buildDate(date)
     val url = s"https://www.linternaute.com/television/programme-$channel-$formattedDate/"
@@ -47,10 +57,6 @@ object LInternauteOverviewCrawler {
     connection.setReadTimeout(2000)
     connection.setRequestMethod("GET")
     connection
-  }
-
-  private def buildTestURLConnection(date: LocalDate, channel: String): URLConnection = {
-    new File(s"stella-brain/src/test/resources/programmes/$channel-2020-01-19.html/").toURI.toURL.openConnection()
   }
 
   private def readPage(connection: URLConnection) = {

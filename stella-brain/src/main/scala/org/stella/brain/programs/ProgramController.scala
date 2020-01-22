@@ -3,13 +3,12 @@ package org.stella.brain.programs
 import java.time.LocalDate
 
 import akka.actor.typed.eventstream.EventStream
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.eventstream.EventStream.Publish
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 import org.stella.brain.programs.ClassifiedProgramManager.ClassifiedProgramManagerMessage
 import org.stella.brain.programs.ProgramClassifier.{ClassAndScore, ProgramClassifierMessage}
 import org.stella.brain.programs.UntrainedProgramManager.UntrainedProgramManagerMessage
-import org.stella.brain.user.RSocketUserManager
 
 import scala.concurrent.duration._
 
@@ -52,6 +51,7 @@ object ProgramController {
       Behaviors.receiveMessage {
         case ProgramByDateTick =>
           val date = LocalDate.now
+          context.log.info("Received ProgramByDateTick")
           val adapter = context.messageAdapter[ProgramCollector.ProgramsByDate](response => ProgramsByDateAdapted(response.date, response.programs))
           context.spawn(ProgramCollector.forTv(), "ProgramCollector") ! ProgramCollector.ProgramsByDateRequest(date, adapter)
           Behaviors.same
@@ -61,7 +61,7 @@ object ProgramController {
           // extract summaries out of programs.
           untrainedProgramManager ! UntrainedProgramManager.UntrainedProgramsNotification(programs.map(_.summary))
           eventStream ! Publish(programs)
-          context.scheduleOnce(1.day, context.self, ProgramByDateTick)
+//          context.scheduleOnce(1.day, context.self, ProgramByDateTick) TODO use timer
           Behaviors.same
         case ProgramsClassificationAdapted(classifiedPrograms) =>
           classifiedProgramManager ! ClassifiedProgramManager.ClassifiedProgramsNotification(classifiedPrograms.map(p => (p._1, p._2._2)))
