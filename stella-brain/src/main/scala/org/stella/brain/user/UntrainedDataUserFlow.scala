@@ -8,14 +8,7 @@ import akka.stream.typed.scaladsl.ActorSource
 import org.stella.brain.programs.UntrainedProgramManager
 import org.stella.brain.programs.UntrainedProgramManager.UntrainedPrograms
 
-/**
-  * Returns an Akka source which generates Untrained data that may be sent to user for manual classification.
-  *
-  * Untrained data are represented as simple strings.
-  * Data retrieved consists of:
-  * - an initial list of untrained data which are stored internally for a short period of time (typically a few days worth of data)
-  * - any new untrained data collected AFTER the source has been created.
-  */
+
 
 object UntrainedDataUserFlow {
 
@@ -27,6 +20,5 @@ object UntrainedDataUserFlow {
           untrainedProgramManager ! UntrainedProgramManager.UntrainedProgramsRequest(hoursSinceLastConnection, actorRef)
           actorSystem.eventStream ! EventStream.Subscribe(actorRef)
         })
-
   }
 }

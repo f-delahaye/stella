@@ -1,5 +1,7 @@
 package org.stella.brain.programs
 
+import java.io.{BufferedInputStream, BufferedOutputStream, DataInputStream, DataOutputStream, FileInputStream, FileOutputStream, InputStream, OutputStream}
+
 import edu.stanford.nlp.classify.{Classifier, GeneralDataset}
 import edu.stanford.nlp.io.IOUtils
 
@@ -19,7 +21,7 @@ trait ClassifierStorage {
    *
    * @return
    */
-  def readClassifier() : (Classifier[String, String], Long)
+  def readClassifier() : (Classifier[String, String], Int)
 
   /**
    * Returns the data the classifier was trained with. Its size will be the same as the second element of the pair returned by readClassifier.
@@ -38,13 +40,30 @@ object StanfordFileStorage extends ClassifierStorage {
   override def storeClassifier(classifier: Classifier[String, String], trainedData: GeneralDataset[String, String]): Unit = {
     IOUtils.writeObjectToFile(classifier, "classifier.ser.gz")
     IOUtils.writeObjectToFile(trainedData, "trained-data.ser.gz")
-    IOUtils.writeObjectToFile(trainedData.size(), "trained-data.size")
+    var file: DataOutputStream = null
+    try {
+      file = new DataOutputStream(new FileOutputStream("trained-data.size"))
+      file.writeInt(trainedData.size)
+    } finally {
+      file.close()
+    }
   }
 
-  override def readClassifier() : (Classifier[String, String], Long)  = {
-    (IOUtils.readObjectFromFile("classifier.ser.gz"), IOUtils.readObjectFromFile("trained-data.size"))
+  override def readClassifier() : (Classifier[String, String], Int)  = {
+    (IOUtils.readObjectFromFile("classifier.ser.gz"), readTrainedDataSize)
   }
 
-  override   def readTrainedData(): GeneralDataset[String, String] = IOUtils.readObjectFromFile("trained-data.ser.gz")
+  private def readTrainedDataSize: Int = {
+    var file: DataInputStream = null
+    try {
+      file = new DataInputStream(new FileInputStream("trained-data.size"))
+      file.readInt
+    } finally {
+      file.close()
+    }
+  }
+
+  override def readTrainedData(): GeneralDataset[String, String] =
+    IOUtils.readObjectFromFile("trained-data.ser.gz")
 
 }

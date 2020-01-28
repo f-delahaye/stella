@@ -40,7 +40,7 @@ class ProgramClassifierSpec extends ScalaTestWithActorTestKit with WordSpecLike 
       val retrainedClassifier = mock[Classifier[String, String]]
       when(cdc.makeClassifier(any())).thenReturn(retrainedClassifier)
 
-      testKit.run(ProgramClassifier.TrainedDataNotification(List(("trained", "class"))))
+      testKit.run(ProgramClassifier.TrainedProgramsNotification(List(("trained", "class"))))
 
       verify(storage, times(1)).storeClassifier(ArgumentMatchers.eq(retrainedClassifier), argThat[GeneralDataset[String, String]](dataset => dataset.size() == 1))
     }
@@ -59,13 +59,13 @@ class ProgramClassifierSpec extends ScalaTestWithActorTestKit with WordSpecLike 
 
       // There were 3 persisted trained data, next retrain size should be 5.
       // We add 1 trained data, which makes it 4, we're still on off. no retrain expected
-      testKit.run(ProgramClassifier.TrainedDataNotification(List(("trained", "class"))))
+      testKit.run(ProgramClassifier.TrainedProgramsNotification(List(("trained", "class"))))
       verify(storage, never()).storeClassifier(any(), any())
 
       val retrainedClassifier = mock[Classifier[String, String]]
       when(cdc.makeClassifier(any())).thenReturn(retrainedClassifier)
       // We add another trained data, which makes it 5, which is a fibonacci value so this should trigger a retrain
-      testKit.run(ProgramClassifier.TrainedDataNotification(List(("trained2", "class2"))))
+      testKit.run(ProgramClassifier.TrainedProgramsNotification(List(("trained2", "class2"))))
 
       verify(storage, times(1)).storeClassifier(ArgumentMatchers.eq(retrainedClassifier), argThat[GeneralDataset[String, String]](dataset => dataset.size() == 5))
 

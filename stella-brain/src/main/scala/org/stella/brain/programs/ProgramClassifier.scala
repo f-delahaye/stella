@@ -7,6 +7,8 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import edu.stanford.nlp.classify._
 
+import scala.util.Try
+
 /**
  * A classifier which may be used to classify data using pre-trained data.
  *
@@ -25,7 +27,7 @@ object ProgramClassifier {
 
   final case class ProgramsClassificationRequest(programs: List[Program], replyTo: ActorRef[ProgramsClassification]) extends ProgramClassifierMessage
   // Client notifying this classifier that new data have been trained
-  final case class TrainedDataNotification(trainedData: List[Trained]) extends ProgramClassifierMessage
+  final case class TrainedProgramsNotification(trainedData: List[Trained]) extends ProgramClassifierMessage
 
   sealed trait ProgramClassifierResponse
   final case class ProgramsClassification(classifications: List[(Program, ClassAndScore)]) extends ProgramClassifierResponse
@@ -51,12 +53,8 @@ object ProgramClassifier {
     def programToDatum(feature: String, rating: String) =
     cdc.makeDatumFromStrings(Array(rating, feature))
 
-    def readClassifier: (Classifier[String, String], Long) = {
-      try {
-        storage.readClassifier()
-      } catch {
-        case _: IOException => (cdc.makeClassifier(new Dataset()), 0)
-      }
+    def readClassifier: (Classifier[String, String], Int) = {
+      Try { storage.readClassifier() } getOrElse((cdc.makeClassifier(new Dataset()), 0))
     }
 
     /**
@@ -65,7 +63,8 @@ object ProgramClassifier {
     def retrainClassifier(newTrainedData: List[Trained]) = {
       // retrain the classifier and return a new behavior that uses this new classifier
       // first off, load the persisted trained data. It is not kept in memory to reduce the footprint
-      val newTrainedDataset = storage.readTrainedData()
+      val newTrainedDataset = Try {storage.readTrainedData} getOrElse(new Dataset[String, String]())
+
       // Then add in the new trained data
       newTrainedData.map(tuple => programToDatum(tuple._1, tuple._2)).foreach(newTrainedDataset.add)
       val newClassifier = cdc.makeClassifier(newTrainedDataset)
@@ -86,7 +85,7 @@ object ProgramClassifier {
             val classifications = programs.map(program => (program, classAndScore(classifier, program.summary)))
             replyTo ! ProgramsClassification(classifications)
             Behaviors.same
-          case TrainedDataNotification(newTrainedData) =>
+          case TrainedProgramsNotification(newTrainedData) =>
             val newPendingTrainedData: List[Trained] = pendingTrainedData ::: newTrainedData
             if (newPendingTrainedData.size >= countUntilNextRetrain) {
               val (newClassifier, newCountUntilNextRetrain) = retrainClassifier(newPendingTrainedData)
@@ -117,7 +116,7 @@ object ProgramClassifier {
    *
    */
   private def calculateCountUntilNextRetrain(dataSize: Long) = {
-    // calculate which element of fibonacci we're at, using binet formula
+    // calculate which element of fibonacci we're at, using binet formula.
     // For example, if f(n) = 13 then n = 7, if f(n) = 21 then n = 8.
     val n = Math.round(Math.log(dataSize * Math.sqrt(5)) / Math.log(1.618))
     // then calculate f(n+1)

@@ -20,7 +20,8 @@ object StellaServer {
       StellaConfig.setLInternauteUrlConnectionProvider(StellaConfig.testLinternauteFileUrlConnectionProvider)
     }
     System.out.println(s"Starting Stella in test mode $testMode")
-    ActorSystem(StellaServer(), "StellaBrain")
+    implicit val system = ActorSystem(StellaServer(), "StellaBrain")
+
     System.out.println("Starting RSocket server")
     new Thread(() => RSocketServer.start).start()
   }
