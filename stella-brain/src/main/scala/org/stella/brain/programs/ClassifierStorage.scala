@@ -43,7 +43,7 @@ object StanfordFileStorage extends ClassifierStorage {
     var file: DataOutputStream = null
     try {
       file = new DataOutputStream(new FileOutputStream("trained-data.size"))
-      file.writeInt(trainedData.size)
+      file.writeUTF(trainedData.size.toString)
     } finally {
       file.close()
     }
@@ -57,7 +57,7 @@ object StanfordFileStorage extends ClassifierStorage {
     var file: DataInputStream = null
     try {
       file = new DataInputStream(new FileInputStream("trained-data.size"))
-      file.readInt
+      file.readUTF().toInt
     } finally {
       file.close()
     }

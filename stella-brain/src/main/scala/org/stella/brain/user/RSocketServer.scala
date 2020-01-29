@@ -62,7 +62,7 @@ object RSocketServer extends RSocketServer{
               System.out.println("Routing to program training")
               val source = Source.fromPublisher(all).map(_.getDataUtf8).map(_.split("=")).map(split => {
                 val trained = (split(0).trim, split(1).trim)
-                System.out.println(s"Received trained $trained")
+                System.out.println(s"[RSocketServer] Received trained $trained")
                 trained
               })
               programTrainingChannelHandler._1.runWith(source)

@@ -7,9 +7,10 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
-import org.stella.brain.programs.ProgramClassifier.{Trained, TrainedProgramsNotification}
+import org.stella.brain.programs.ProgramClassifier.Trained
 import org.stella.brain.programs.UntrainedProgramManager.UntrainedPrograms
-import org.stella.brain.user.RSocketServer
+import org.stella.brain.user.ProgramsNotificationSink.{TrainedProgramNotificationReceived, TrainedProgramsNotificationComplete, ProgramsNotificationSinkMessage}
+import org.stella.brain.user.{RSocketServer, ProgramsNotificationSink}
 
 /**
  * The main program actor.
@@ -17,8 +18,6 @@ import org.stella.brain.user.RSocketServer
  * Acts as the guardian of the program actors hierarchy
  */
 object ProgramMain {
-  private val CompletedTrainedProgramsNotification = TrainedProgramsNotification(List.empty)
-  private val FailedTrainedProgramsNotification = TrainedProgramsNotification(List.empty)
 
   def apply(server: RSocketServer): Behavior[NotUsed] =
     Behaviors.setup { context =>
@@ -29,7 +28,8 @@ object ProgramMain {
       val classifiedProgramManager = context.spawn(ClassifiedProgramManager(), "ClassifiedProgramManager")
       val programController = context.spawn(ProgramController(programClassifier, untrainedProgramManager, classifiedProgramManager, context.system.eventStream), "ProgramController")
 
-      server.programTrainingChannel((trainedProgramsSink(programClassifier), untrainedProgramsSource(24, untrainedProgramManager, context.system.eventStream)))
+      val programsNotificationSink = context.spawn(ProgramsNotificationSink(programClassifier), "programsNotificationSink")
+      server.programTrainingChannel((trainedProgramsSink(programsNotificationSink), untrainedProgramsSource(24, untrainedProgramManager, context.system.eventStream)))
       //TODO observe untrainedProgramManager and remove route upon its termination
 
      programController ! ProgramController.ProgramByDateTick
@@ -37,12 +37,13 @@ object ProgramMain {
       Behaviors.empty
     }
 
-  private def trainedProgramsSink(programClassifier: ActorRef[TrainedProgramsNotification]): Sink[Trained, _] =
-    ActorSink.actorRef[TrainedProgramsNotification](programClassifier, CompletedTrainedProgramsNotification, exc => FailedTrainedProgramsNotification)
+  private def trainedProgramsSink(userProgramNotificationManager: ActorRef[ProgramsNotificationSinkMessage]): Sink[Trained, _] = {
+
+    ActorSink.actorRef[ProgramsNotificationSinkMessage](userProgramNotificationManager, ProgramsNotificationSink.TrainedProgramsNotificationComplete, exc => TrainedProgramsNotificationComplete)
       .contramap(trained => {
-        System.out.println(s"Received training $trained")
-        TrainedProgramsNotification(List(trained))
+        TrainedProgramNotificationReceived(trained)
       })
+  }
 
   /**
    * Returns an Akka source which generates Untrained data that may be sent to user for manual classification.

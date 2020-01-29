@@ -63,7 +63,11 @@ object ProgramClassifier {
     def retrainClassifier(newTrainedData: List[Trained]) = {
       // retrain the classifier and return a new behavior that uses this new classifier
       // first off, load the persisted trained data. It is not kept in memory to reduce the footprint
-      val newTrainedDataset = Try {storage.readTrainedData} getOrElse(new Dataset[String, String]())
+      val newTrainedDataset = Try {
+        storage.readTrainedData
+      } getOrElse
+        new Dataset[String, String]()
+
 
       // Then add in the new trained data
       newTrainedData.map(tuple => programToDatum(tuple._1, tuple._2)).foreach(newTrainedDataset.add)
@@ -79,7 +83,7 @@ object ProgramClassifier {
      * @return
      */
     def handle(classifier: Classifier[String, String], pendingTrainedData: List[Trained], countUntilNextRetrain: Long): Behavior[ProgramClassifierMessage] =
-      Behaviors.setup { _ =>
+      Behaviors.setup { context =>
         Behaviors.receiveMessage {
           case ProgramsClassificationRequest(programs, replyTo) =>
             val classifications = programs.map(program => (program, classAndScore(classifier, program.summary)))
@@ -87,6 +91,7 @@ object ProgramClassifier {
             Behaviors.same
           case TrainedProgramsNotification(newTrainedData) =>
             val newPendingTrainedData: List[Trained] = pendingTrainedData ::: newTrainedData
+//            context.log.info(s"trainedProgramsNotification received, $newPendingTrainedData -> $countUntilNextRetrain")
             if (newPendingTrainedData.size >= countUntilNextRetrain) {
               val (newClassifier, newCountUntilNextRetrain) = retrainClassifier(newPendingTrainedData)
               handle(newClassifier, List.empty, newCountUntilNextRetrain)
