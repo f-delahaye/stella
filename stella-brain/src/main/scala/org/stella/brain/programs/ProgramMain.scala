@@ -9,8 +9,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
 import org.stella.brain.programs.ProgramClassifier.Trained
 import org.stella.brain.programs.UntrainedProgramManager.UntrainedPrograms
-import org.stella.brain.user.ProgramsNotificationSink.{TrainedProgramNotificationReceived, TrainedProgramsNotificationComplete, ProgramsNotificationSinkMessage}
-import org.stella.brain.user.{RSocketServer, ProgramsNotificationSink}
+import org.stella.brain.user.ProgramsNotificationSink.{ProgramsNotificationSinkMessage, TrainedProgramNotificationFailed, TrainedProgramNotificationReceived, TrainedProgramsNotificationComplete}
+import org.stella.brain.user.{ProgramsNotificationSink, RSocketServer}
 
 /**
  * The main program actor.
@@ -39,7 +39,7 @@ object ProgramMain {
 
   private def trainedProgramsSink(userProgramNotificationManager: ActorRef[ProgramsNotificationSinkMessage]): Sink[Trained, _] = {
 
-    ActorSink.actorRef[ProgramsNotificationSinkMessage](userProgramNotificationManager, ProgramsNotificationSink.TrainedProgramsNotificationComplete, exc => TrainedProgramsNotificationComplete)
+    ActorSink.actorRef[ProgramsNotificationSinkMessage](userProgramNotificationManager, TrainedProgramsNotificationComplete, TrainedProgramNotificationFailed.apply)
       .contramap(trained => {
         TrainedProgramNotificationReceived(trained)
       })

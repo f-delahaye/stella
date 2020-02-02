@@ -1,5 +1,7 @@
 package org.stella.brain.user
 
+import java.time.Duration
+
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import io.rsocket._
@@ -51,22 +53,20 @@ object RSocketServer extends RSocketServer{
       .subscribe()
 
     def createSocket(): Mono[RSocket] = {
-      //  override def accept(setup: ConnectionSetupPayload, sendingSocket: RSocket): Mono[RSocket] = {
 
       val socket = new AbstractRSocket() {
-        System.out.println("New RSocket")
 
         private def handle(first: Payload, all: Flux[Payload]): Flux[Payload] =
           extractRoute(first) match {
             case Some("program.training") =>
-              System.out.println("Routing to program training")
-              val source = Source.fromPublisher(all).map(_.getDataUtf8).map(_.split("=")).map(split => {
-                val trained = (split(0).trim, split(1).trim)
-                System.out.println(s"[RSocketServer] Received trained $trained")
-                trained
-              })
+// Delay the subscription, else we end up in https://stackoverflow.com/questions/60019029/first-element-sometimes-not-included-in-the-second-argument-of-flux-switchonfirs
+              val source = Source.fromPublisher(all.delaySubscription(Duration.ofMillis(200))
+                .map[String](_.getDataUtf8)
+                .map[Array[String]](_.split("="))
+                .map(split => (split(0).trim, split(1).trim)))
               programTrainingChannelHandler._1.runWith(source)
               Flux.from(programTrainingChannelHandler._2.map(DefaultPayload.create).runWith(Sink.asPublisher(false))(materializer))
+
             case None => Flux.empty()
           }
 
