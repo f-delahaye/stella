@@ -1,7 +1,5 @@
 package org.stella.brain.user
 
-import java.time.Duration
-
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import io.rsocket._
@@ -57,15 +55,18 @@ object RSocketServer extends RSocketServer{
       val socket = new AbstractRSocket() {
 
         private def handle(first: Payload, all: Flux[Payload]): Flux[Payload] =
-          extractRoute(first) match {
-            case Some("program.training") =>
-// Delay the subscription, else we end up in https://stackoverflow.com/questions/60019029/first-element-sometimes-not-included-in-the-second-argument-of-flux-switchonfirs
-              val source = Source.fromPublisher(all.delaySubscription(Duration.ofMillis(200))
-                .map[String](_.getDataUtf8)
-                .map[Array[String]](_.split("="))
-                .map(split => (split(0).trim, split(1).trim)))
-              programTrainingChannelHandler._1.runWith(source)
-              Flux.from(programTrainingChannelHandler._2.map(DefaultPayload.create).runWith(Sink.asPublisher(false))(materializer))
+
+        extractRoute(first) match {
+          case Some("program.training") =>
+
+            val source = Source.fromPublisher(all.log
+              .map[String](_.getDataUtf8)
+              .map[Array[String]](_.split("="))
+              .map(split => (split(0).trim, split(1).trim)))
+            programTrainingChannelHandler._1.runWith(source)
+
+            // Why Flux.defer? https://stackoverflow.com/questions/60019029/first-element-sometimes-not-included-in-the-second-argument-of-flux-switchonfirs
+              Flux.defer( () => programTrainingChannelHandler._2.map(DefaultPayload.create).runWith(Sink.asPublisher(false))(materializer))
 
             case None => Flux.empty()
           }
@@ -76,7 +77,7 @@ object RSocketServer extends RSocketServer{
         // but is not a standard api.
         // So we're sticking with switchOnFirst even though the javadoc states that the return should be based off the all parameter,
         // which as far as i understand is not a requirement of RSocket (the returned Flux may be nothing to do with the one passed in)
-          Flux.from(payloads).switchOnFirst((signal, all) => Option(signal.get()).map(handle(_, all)).getOrElse(all))
+          Flux.from(payloads).log.switchOnFirst((signal, all) => Option(signal.get()).map(handle(_, all)).getOrElse(all))
       }
 
       Mono.just(socket)
