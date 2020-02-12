@@ -55,7 +55,6 @@ object StellaTestClient {
       System.out.println("Enter trained program:")
       scala.io.StdIn.readLine
     }.takeWhile(_.nonEmpty).foreach { line =>
-      System.out.println(s"Emitting $line")
       emitter.next(line)
     }
     emitter.complete()

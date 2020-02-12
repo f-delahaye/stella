@@ -24,8 +24,8 @@ class ProgramCollectorSpec extends ScalaTestWithActorTestKit with WordSpecLike  
       // Spawned asserts equality on childName, Props ... and behavior using reference equality
       // so we can't use expectEffect(Spawned(LInternateOverviewCrawler(), <name>) as LInternauteOverviewCrawler will create a new instance
       // which  while functionally equivalent to the one actually used at runtime, is not ===.
-      testKit.expectEffectPF {case Spawned(_, name, _) if name == "LInternauteCrawlerchannel1" =>}
-      testKit.expectEffectPF {case Spawned(_, name, _) if name == "LInternauteCrawlerchannel2" =>}
+      testKit.expectEffectPF {case Spawned(_, name, _) if name == "LInternauteCrawler-channel1" =>}
+      testKit.expectEffectPF {case Spawned(_, name, _) if name == "LInternauteCrawler-channel2" =>}
 
     }
 

@@ -1,6 +1,6 @@
 package org.stella.brain.programs
 
-import akka.actor.typed.eventstream.EventStream.Publish
+import akka.actor.typed.eventstream.EventStream.{Command, Publish}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 
@@ -43,17 +43,19 @@ object UntrainedProgramManager {
           replyTo ! UntrainedPrograms(untrainedPrograms)
           Behaviors.same
         case UntrainedProgramsNotification(newUntrainedPrograms) =>
-          publishToEventStream(context.system, newUntrainedPrograms)
+          publishToEventStream(context.system.eventStream, newUntrainedPrograms)
           handle(untrainedPrograms ::: newUntrainedPrograms)
       }
     }
 
-  def apply(): Behavior[UntrainedProgramManagerMessage] = handle(List.empty)
+  def apply(): Behavior[UntrainedProgramManagerMessage] = {
+    handle(List.empty)
+  }
 
   // A convenience method which should be used by the unit test which validates the listening actor.
   // Hence that test should look like:
   // ActorRef subscriberProbe = TestProbe...
   // UntrainedProgramManager.publishToEventStream(...)
   // expectMessage(subscriberProbe.UntrainedData(...))
-  def publishToEventStream(system: ActorSystem[_], untrained: List[Untrained]): Unit = system.eventStream ! Publish(UntrainedPrograms(untrained))
+  def publishToEventStream(eventStream: ActorRef[Command], untrained: List[Untrained]): Unit = eventStream ! Publish(UntrainedPrograms(untrained))
 }

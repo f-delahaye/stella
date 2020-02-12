@@ -37,7 +37,7 @@ object ProgramMain {
       Behaviors.empty
     }
 
-  private def trainedProgramsSink(userProgramNotificationManager: ActorRef[ProgramsNotificationSinkMessage]): Sink[Trained, _] = {
+  private[programs] def trainedProgramsSink(userProgramNotificationManager: ActorRef[ProgramsNotificationSinkMessage]): Sink[Trained, _] = {
 
     ActorSink.actorRef[ProgramsNotificationSinkMessage](userProgramNotificationManager, TrainedProgramsNotificationComplete, TrainedProgramNotificationFailed.apply)
       .contramap(trained => {
@@ -53,7 +53,7 @@ object ProgramMain {
    * - an initial list of untrained data which are stored internally for a short period of time (typically a few days worth of data)
    * - any new untrained data collected AFTER the source has been created.
    */
-  private def untrainedProgramsSource(hoursSinceLastConnection: Long, untrainedProgramManager: ActorRef[UntrainedProgramManager.UntrainedProgramManagerMessage], eventStream: ActorRef[EventStream.Command]): Source[String, _] = {
+  private[programs] def untrainedProgramsSource(hoursSinceLastConnection: Long, untrainedProgramManager: ActorRef[UntrainedProgramManager.UntrainedProgramManagerMessage], eventStream: ActorRef[EventStream.Command]): Source[String, _] = {
     ActorSource.actorRef[UntrainedPrograms](PartialFunction.empty,PartialFunction.empty, 10, OverflowStrategy.dropHead)
       .mapConcat(_.untrainedPrograms)// extract list from message
       .mapMaterializedValue(
