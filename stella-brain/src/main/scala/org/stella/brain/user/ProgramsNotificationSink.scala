@@ -20,13 +20,13 @@ object ProgramsNotificationSink {
     Behaviors.setup { context =>
       Behaviors.receiveMessage {
         case TrainedProgramsNotificationComplete =>
-          System.out.println("[Sink] Completed")
+          context.log.info("[Sink] Completed")
           Behaviors.same
         case TrainedProgramNotificationFailed(exception) =>
           context.log.error("[Sink] Failed", exception)
           Behaviors.same
         case TrainedProgramNotificationReceived(trainedProgram) =>
-          System.out.println("[Sink] Received "+trainedProgram._1)
+          context.log.info("[Sink] Received "+trainedProgram._1)
           programClassifier ! TrainedProgramsNotification(List(trainedProgram))
           Behaviors.same
       }

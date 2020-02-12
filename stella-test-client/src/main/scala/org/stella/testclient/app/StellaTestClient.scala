@@ -9,8 +9,8 @@ import io.netty.buffer.ByteBufAllocator
 import io.rsocket.Payload
 import io.rsocket.metadata.{CompositeMetadataFlyweight, TaggingMetadataFlyweight, WellKnownMimeType}
 import io.rsocket.transport.netty.client.TcpClientTransport
-import org.reactivestreams.Publisher
-import reactor.core.publisher.{Flux, FluxSink}
+import reactor.core.publisher.{Flux, FluxSink, Mono}
+import reactor.core.scheduler.Schedulers
 
 object StellaTestClient {
 
@@ -19,16 +19,19 @@ object StellaTestClient {
 
   private val rsocket = RSocketFactory.connect.transport(TcpClientTransport.create(7878)).start.block
 
-  def dispose() = rsocket.dispose()
+  def dispose(): Unit = rsocket.dispose()
 
   def configure(trainedProgramsEmitter: Consumer[FluxSink[String]]): Unit = {
 
-    def buildPayloads(first: String, all: Flux[String]): Publisher[Payload] = Flux.just(createPayloadWithRoute(first, "program.training"))
-      .concatWith(all.skip(1).map(DefaultPayload.create))
-
-    val trainedProgramsSource: Flux[Payload] = Flux.create[String](trainedProgramsEmitter).log().
-      switchOnFirst((first, all) => buildPayloads(first.get, all))
-//      .subscribeOn(Schedulers.newSingle("test"), true)
+    val trainedProgramsSource: Flux[Payload] =
+// Using switchOnFirst is neater: all client does is emitting items, and all server does is receiving them, with the route medata being added under the hoods in the first message
+// However, using switchOnFirst along with FluxSink is tricky: fluxSink will only be available when subscribe() is called, and subscribe will only be called when the first item is sent which requires the emitter?
+// So maybe that is possible but i couldn't find out how. Instead, we use a dummy first item with no data, just the routing metadata, which the server will have to ignore.
+// The switchOnFirst logic is retained below for documentation purposes.
+//      Flux.create[String](trainedProgramsEmitter).switchOnFirst[Payload]((first, all) => Flux.just(createPayloadWithRoute(first.get, "program.training")).concatWith(all.skip(1).map(DefaultPayload.create)))
+      Mono.just(createPayloadWithRoute("", "program.training"))
+        .concatWith(Flux.create[String](trainedProgramsEmitter).map(DefaultPayload.create))
+        .subscribeOn(Schedulers.newSingle("subscribe thread"), false)
 
     rsocket.requestChannel(trainedProgramsSource.doOnNext(p => System.out.println(p.getDataUtf8)))
       .doOnNext(p => System.out.println(p.getDataUtf8))
@@ -47,7 +50,7 @@ object StellaTestClient {
     metadataBuffer.nioBuffer()
   }
 
-  def sendTrainedProgramsFromConsole(emitter: FluxSink[String]) = {
+  def sendTrainedProgramsFromConsole(emitter: FluxSink[String]): Unit = {
     Iterator.continually {
       System.out.println("Enter trained program:")
       scala.io.StdIn.readLine

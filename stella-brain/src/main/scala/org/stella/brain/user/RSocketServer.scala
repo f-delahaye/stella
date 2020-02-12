@@ -47,7 +47,6 @@ object RSocketServer extends RSocketServer{
       .acceptor((_, _) => createSocket())
       .transport(TcpServerTransport.create(7878))
       .start()
-      // TODO not clear if this flavor of subscribe or one with a consumer and/or error handler should be used
       .subscribe()
 
     def createSocket(): Mono[RSocket] = {
@@ -58,17 +57,18 @@ object RSocketServer extends RSocketServer{
 
         extractRoute(first) match {
           case Some("program.training") =>
-
-            val source = Source.fromPublisher(all.log
+            val source = Source.fromPublisher(all
               .map[String](_.getDataUtf8)
               .map[Array[String]](_.split("="))
+              .filter(_.length == 2)
               .map(split => (split(0).trim, split(1).trim)))
             programTrainingChannelHandler._1.runWith(source)
 
             // Why Flux.defer? https://stackoverflow.com/questions/60019029/first-element-sometimes-not-included-in-the-second-argument-of-flux-switchonfirs
               Flux.defer( () => programTrainingChannelHandler._2.map(DefaultPayload.create).runWith(Sink.asPublisher(false))(materializer))
 
-            case None => Flux.empty()
+            case None =>
+              Flux.empty()
           }
 
 
@@ -77,7 +77,7 @@ object RSocketServer extends RSocketServer{
         // but is not a standard api.
         // So we're sticking with switchOnFirst even though the javadoc states that the return should be based off the all parameter,
         // which as far as i understand is not a requirement of RSocket (the returned Flux may be nothing to do with the one passed in)
-          Flux.from(payloads).log.switchOnFirst((signal, all) => Option(signal.get()).map(handle(_, all)).getOrElse(all))
+          Flux.from(payloads).switchOnFirst((signal, all) => Option(signal.get()).map(handle(_, all)).getOrElse(all))
       }
 
       Mono.just(socket)

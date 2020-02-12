@@ -91,7 +91,7 @@ object ProgramClassifier {
             Behaviors.same
           case TrainedProgramsNotification(newTrainedData) =>
             val newPendingTrainedData: List[Trained] = pendingTrainedData ::: newTrainedData
-//            context.log.info(s"trainedProgramsNotification received, $newPendingTrainedData -> $countUntilNextRetrain")
+            context.log.debug(s"Pending trained data size: ${newPendingTrainedData.size}, next retraining @$countUntilNextRetrain")
             if (newPendingTrainedData.size >= countUntilNextRetrain) {
               val (newClassifier, newCountUntilNextRetrain) = retrainClassifier(newPendingTrainedData)
               handle(newClassifier, List.empty, newCountUntilNextRetrain)
