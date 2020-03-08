@@ -46,14 +46,14 @@ object ProgramController {
    * Supervision wise, it doesn't look wrong either to have the main program guardian as the parent of these actors, rather than ProgramController (as would be the case if they were spawned in here).
    *
    */
-  def apply(programClassifier: ActorRef[ProgramClassifierMessage], untrainedProgramManager: ActorRef[UntrainedProgramManagerMessage], classifiedProgramManager: ActorRef[ClassifiedProgramManagerMessage], eventStream: ActorRef[EventStream.Command]): Behavior[ProgramControllerMessage] = {
+  def apply(programClassifier: ActorRef[ProgramClassifierMessage], untrainedProgramManager: ActorRef[UntrainedProgramManagerMessage], classifiedProgramManager: ActorRef[ClassifiedProgramManagerMessage], eventStream: ActorRef[EventStream.Command], programCache: ActorRef[ProgramCache.Command]): Behavior[ProgramControllerMessage] = {
     Behaviors.setup { context =>
       Behaviors.receiveMessage {
         case ProgramByDateTick =>
           val date = LocalDate.now
           context.log.info("Received ProgramByDateTick")
           val adapter = context.messageAdapter[ProgramCollector.ProgramsByDate](response => ProgramsByDateAdapted(response.date, response.programs))
-          context.spawn(ProgramCollector.forTv(), "ProgramCollector") ! ProgramCollector.ProgramsByDateRequest(date, adapter)
+          context.spawn(ProgramCollector(ProgramCollector.TV_CHANNELS, programCache), "ProgramCollector") ! ProgramCollector.ProgramsByDateRequest(date, adapter)
           Behaviors.same
         case ProgramsByDateAdapted(date, programs) =>
           val programsClassificationAdapter = context.messageAdapter[ProgramClassifier.ProgramsClassification](response => ProgramsClassificationAdapted(response.classifications))

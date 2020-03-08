@@ -20,7 +20,7 @@ class ProgramControllerSpec extends ScalaTestWithActorTestKit with WordSpecLike 
   "program controller" must {
 
     "spawn all expected actors" in {
-      val testController = BehaviorTestKit(ProgramController(null, null, null, null))
+      val testController = BehaviorTestKit(ProgramController(null, null, null, null, null))
 
       testController.run(ProgramController.ProgramByDateTick)
 
@@ -39,7 +39,7 @@ class ProgramControllerSpec extends ScalaTestWithActorTestKit with WordSpecLike 
       val testUntrainedManager = TestInbox[UntrainedProgramManagerMessage]()
       val testEventStream = TestInbox[EventStream.Command]()
 
-      val testController = BehaviorTestKit(ProgramController(testClassifier.ref, testUntrainedManager.ref, null, testEventStream.ref))
+      val testController = BehaviorTestKit(ProgramController(testClassifier.ref, testUntrainedManager.ref, null, testEventStream.ref, null))
 
       val collectedPrograms = List(Program(LocalDateTime.now(), "channel", "title", "summary"))
       testController.run(ProgramController.ProgramsByDateAdapted(LocalDate.now(), collectedPrograms))
@@ -56,7 +56,7 @@ class ProgramControllerSpec extends ScalaTestWithActorTestKit with WordSpecLike 
     "forward classified programs to classifier manager" in {
       val testClassifiedManager = TestInbox[ClassifiedProgramManagerMessage]()
 
-      val testController = BehaviorTestKit(ProgramController(null, null, testClassifiedManager.ref, null))
+      val testController = BehaviorTestKit(ProgramController(null, null, testClassifiedManager.ref, null, null))
 
       val program: Program = Program(LocalDateTime.now(), "channel", "title", "summary")
       val classifiedPrograms: List[(Program, ClassAndScore)] = List((program, ("class", 1.0)))

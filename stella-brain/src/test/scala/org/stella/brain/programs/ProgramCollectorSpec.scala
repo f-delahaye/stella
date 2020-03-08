@@ -11,12 +11,13 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.stella.brain.programs.ProgramCollector.ProgramsByDate
 
 @RunWith(classOf[JUnitRunner])
-class ProgramCollectorSpec extends ScalaTestWithActorTestKit with WordSpecLike  with MockitoSugar {
+class ProgramCollectorSpec extends ScalaTestWithActorTestKit("akka.persistence.journal.plugin = \"akka.persistence.journal.inmem\"") with WordSpecLike  with MockitoSugar {
 
   "program collector" must {
+    val programCache = TestInbox[ProgramCache.Command]()
 
     "query all channels" in {
-      val testKit = BehaviorTestKit(ProgramCollector(List("channel1", "channel2")))
+      val testKit = BehaviorTestKit(ProgramCollector(List("channel1", "channel2"), programCache.ref))
       val probe = TestInbox[ProgramsByDate]()
 
       testKit.run(ProgramCollector.ProgramsByDateRequest(LocalDate.now, probe.ref))
@@ -30,7 +31,7 @@ class ProgramCollectorSpec extends ScalaTestWithActorTestKit with WordSpecLike  
     }
 
     "wait for all channels programs" in {
-      val testKit = BehaviorTestKit(ProgramCollector(List("channel1", "channel2")))
+      val testKit = BehaviorTestKit(ProgramCollector(List("channel1", "channel2"), programCache.ref))
       val probe = TestInbox[ProgramsByDate]()
 
       val channel1Programs = List(Program(LocalDateTime.now(), "channel1", "foo1.1", "bar1.1"), Program(LocalDateTime.now(), "channel1", "foo1.2", "bar1.2"))

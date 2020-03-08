@@ -20,18 +20,15 @@ object ProgramCollector {
 
   final case class ProgramsByDate(date: LocalDate, programs: List[Program])
 
-  def forTv() = apply(TV_CHANNELS)
-
-  def apply(channels: List[String]) = {
+  def apply(channels: List[String], programCache: ActorRef[ProgramCache.Command]) = {
     def handle(channels: List[String], programs: List[Program], replyTo: ActorRef[ProgramsByDate]): Behavior[ProgramCollectorMessage] =
       Behaviors.setup { context =>
         Behaviors.receiveMessage {
           case ProgramsByDateRequest(date, replyTo) =>
-            val adapter = context.messageAdapter[LInternauteOverviewCrawler.LInternauteOverviewTvPrograms](response => ProgramsByDateAndChannelAdapted(response.date, response.channel, response.programs))
+            val adapter = context.messageAdapter[LInternauteOverviewCrawler.SendLInternautePrograms](response => ProgramsByDateAndChannelAdapted(response.date, response.channel, response.programs))
             channels.foreach(channel => {
-              context.spawn(LInternauteOverviewCrawler(), s"LInternauteCrawler-$channel") ! LInternauteOverviewCrawler.LInternauteOverviewRequest(date, channel, adapter)
-            }
-            )
+              context.spawn(LInternauteOverviewCrawler(programCache), s"LInternauteCrawler-$channel") ! LInternauteOverviewCrawler.RequestLInternautePrograms(date, channel, adapter)
+            })
             handle(channels, List.empty, replyTo)
           case ProgramsByDateAndChannelAdapted(date, channel, progs) =>
             val newPrograms = programs ::: progs

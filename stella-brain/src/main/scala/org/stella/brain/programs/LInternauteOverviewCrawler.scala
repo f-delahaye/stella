@@ -1,12 +1,15 @@
 package org.stella.brain.programs
 
-import java.net.{HttpURLConnection, URL, URLConnection}
+import java.io.InputStream
+import java.net.{HttpURLConnection, URL}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalTime}
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import org.stella.brain.app.StellaConfig
+import org.stella.brain.programs.LInternauteOverviewCrawler.RequestMode.RequestMode
+import org.stella.brain.programs.ProgramCache.ProgramsLoadedFromCache
 import org.unbescape.html.HtmlEscape
 
 import scala.io.Source
@@ -19,9 +22,12 @@ import scala.io.Source
   */
 object LInternauteOverviewCrawler {
 
-  type LInternauteUrlConnectionProvider = (LocalDate, String) => URLConnection
+  type URLStreamProvider = (LocalDate, String) => InputStream
 
-  private val defaultUrlConnectionProvider: LInternauteUrlConnectionProvider = buildHttpURLConnection
+  object RequestMode extends Enumeration {
+    type RequestMode = Value
+    val CacheOrUrl, Url, TestFile = Value
+  }
 
   private val DAYS_OF_WEEK = Array("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
   private val MONTHS_OF_YEAR = Array("janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre")
@@ -32,39 +38,66 @@ object LInternauteOverviewCrawler {
     * PROTOCOL
     *
     */
-  final case class LInternauteOverviewRequest(date: LocalDate, channel: String, replyTo: ActorRef[LInternauteOverviewTvPrograms])
-  final case class LInternauteOverviewTvPrograms(date: LocalDate, channel: String, programs: List[Program])
+  sealed trait Command
+  // request from user
+  final case class RequestLInternautePrograms(date: LocalDate, channel: String,replyTo: ActorRef[SendLInternautePrograms], mode: RequestMode = StellaConfig.getLInternauteRequestMode) extends Command
+  // internal message emitted when the programs have been loaded from the cache.
+  final private[programs] case class ProgramsLoadedFromCacheAdapted(date: LocalDate, channel: String, programs: Option[List[Program]], replyTo: ActorRef[SendLInternautePrograms]) extends Command
+  // response back to user
+  final case class SendLInternautePrograms(date: LocalDate, channel: String, programs: List[Program])
 
-  def apply(): Behavior[LInternauteOverviewRequest] = apply(StellaConfig.getLInternauteUrlConnectionProvider)
-  /**
-   * If a non empty urlConnectionProvider is supplied, it will be used to load a page. This is useful for unit & live testing
-   * If empty is supplied, a default provider will be used that load the page from the Linternaute web site
-   *
-   */
-  def apply(urlConnectionProvider: Option[LInternauteUrlConnectionProvider]): Behavior[LInternauteOverviewRequest] =  Behaviors.receive[LInternauteOverviewRequest] { (context, message) =>
-    val connection = urlConnectionProvider.getOrElse(defaultUrlConnectionProvider).apply(message.date, message.channel)
-    context.log.info("Reading page from {}", connection)
-    val programs = parseBody(message.date, message.channel, readPage(connection))
-    message.replyTo ! LInternauteOverviewTvPrograms(message.date, message.channel, programs)
-    Behaviors.stopped
+  def apply(cache: ActorRef[ProgramCache.Command], urlStreamProvider: URLStreamProvider = buildHttpURLConnection): Behavior[Command] =
+    Behaviors.setup { context =>
+
+      // load programs, from a location which depends on the specified mode.
+      // For non cache based modes, programs will be returned to replyTo.
+      // For cache based modes, a message will be sent to the cache, and the programs will be sent back to client upon receiving the cache's answer.
+      // In case of cache miss, the default url based mode will be used instead
+      def loadPrograms(date: LocalDate, channel: String, mode: RequestMode, storePrograms: Boolean, replyTo: ActorRef[SendLInternautePrograms]): Unit = {
+
+        def loadNonCachedPrograms(content: String) = {
+          val programs = parseBody(date, channel, content)
+          if (storePrograms) {
+            cache ! ProgramCache.StoreProgramsInCache(date, channel, programs)
+          }
+          replyTo ! SendLInternautePrograms(date, channel, programs)
+        }
+
+        mode match {
+          case RequestMode.Url =>
+            loadNonCachedPrograms(Source.fromInputStream(urlStreamProvider(date, channel)).mkString)
+          case RequestMode.TestFile =>
+            loadNonCachedPrograms(Source.fromResource(s"/programmes/$channel-2020-01-19.html").mkString)
+          case RequestMode.CacheOrUrl =>
+            val adapter = context.messageAdapter[ProgramsLoadedFromCache](resp => ProgramsLoadedFromCacheAdapted(date, channel, resp.programs, replyTo))
+            cache ! ProgramCache.LoadProgramsFromCache(date, channel, adapter)
+        }
+      }
+
+      Behaviors.receiveMessage {
+        case RequestLInternautePrograms(date, channel, replyTo, mode) =>
+          loadPrograms(date, channel, mode, storePrograms = false, replyTo)
+          Behaviors.same
+        case ProgramsLoadedFromCacheAdapted(date, channel, programs, replyTo) =>
+          if (programs.nonEmpty) {
+            replyTo ! SendLInternautePrograms(date, channel, programs.get)
+          } else {
+            loadPrograms(date, channel, RequestMode.Url, storePrograms = true, replyTo)
+          }
+          Behaviors.same
+      }
   }
 
-  private def buildHttpURLConnection(date: LocalDate, channel: String): HttpURLConnection = {
+  private[programs] def buildHttpURLConnection(date: LocalDate, channel: String): InputStream = {
     val formattedDate = buildDate(date)
     val url = s"https://www.linternaute.com/television/programme-$channel-$formattedDate/"
     val connection = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
     connection.setConnectTimeout(5000)
     connection.setReadTimeout(2000)
     connection.setRequestMethod("GET")
-    connection
+    connection.getInputStream
   }
 
-  private def readPage(connection: URLConnection) = {
-    val inputStream = connection.getInputStream
-    val content = Source.fromInputStream(inputStream).mkString
-    if (inputStream != null) inputStream.close()
-    content
-  }
 
   // DateTimeFormatter.ofPattern("EEEE-dd-MMMM-yyyy", Locale.FRENCH) ALMOST does the trick but it generates some months with an accent e.g. août when linternaute expects aout
   private def buildDate(date: LocalDate): String = {
