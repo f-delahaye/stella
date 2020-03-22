@@ -2,14 +2,14 @@ package org.stella.brain.programs
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import org.junit.runner.RunWith
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.junit.JUnitRunner
 import org.stella.brain.programs.UntrainedProgramManager.{UntrainedPrograms, UntrainedProgramsNotification, UntrainedProgramsRequest}
 
 import scala.concurrent.duration._
 
 @RunWith(classOf[JUnitRunner])
-class UntrainedProgramManagerSpec extends ScalaTestWithActorTestKit with WordSpecLike {
+class UntrainedProgramManagerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
   "Untrained program manager" must {
 
     "send empty untrained data list by default" in {

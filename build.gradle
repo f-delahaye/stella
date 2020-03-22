@@ -10,7 +10,7 @@ buildscript {
     dependencies {
         // see https://plugins.gradle.org/plugin/com.lightbend.akka.grpc.gradle
         // for the currently latest version.
-        classpath 'gradle.plugin.com.lightbend.akka.grpc:akka-grpc-gradle-plugin:0.7.2'
+        // classpath 'gradle.plugin.com.lightbend.akka.grpc:akka-grpc-gradle-plugin:0.7.2'
     }
 }
 
@@ -24,42 +24,27 @@ subprojects {
     }
 }
 
-/*
-project(':stella-blue-shared') {
-}
-
-project(':stella-blue-bridge') {
-    apply plugin: 'java'
-    sourceCompatibility = 1.8
-
-    dependencies {
-        implementation project(':stella-blue-shared')
-	implementation "net.sf.bluecove:bluecove:2.1.0"
-    }
-}
-*/
-
-project(':stella-ai') {
+project(':stella-brain') {
     apply plugin: 'scala'
-    apply plugin: 'com.lightbend.akka.grpc.gradle'
     apply plugin: 'application'
     mainClassName = 'org.stella.ai.tv.Main'
     dependencies {
-	implementation 'org.scala-lang:scala-library:2.12.8'
+	    implementation 'org.scala-lang:scala-library:2.13.1'
         implementation 'edu.stanford.nlp:stanford-corenlp:3.9.2'
-        implementation group: 'com.ning', name: 'async-http-client', version: '1.9.40'
-        implementation group: 'org.apache.ignite', name: 'ignite-core', version: '2.7.0'
-        implementation group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.23'
-        implementation group: 'com.typesafe.akka', name: 'akka-http_2.12',   version: '10.1.9'
-        implementation group: 'com.typesafe.akka', name: 'akka-stream_2.12', version: '2.5.23'
+        implementation group: 'com.typesafe.akka', name: 'akka-actor-typed_2.13', version: '2.6.4'
+        implementation group: 'com.typesafe.akka', name: 'akka-stream-typed_2.13', version: '2.6.4'
+        implementation group: 'com.typesafe.akka', name: 'akka-persistence-typed_2.13', version: '2.6.4'
+        implementation group: 'io.rsocket', name: 'rsocket-core', version: '1.0.0-RC6'
+        implementation group: 'io.rsocket', name: 'rsocket-transport-netty', version: '1.0.0-RC6'
         implementation group: 'org.unbescape', name: 'unbescape', version: '1.1.6.RELEASE'
-        testImplementation group: 'org.glassfish.tyrus', name: 'tyrus-server', version: '1.15'
-	testImplementation group: 'com.typesafe.akka', name: 'akka-testkit_2.12', version: '2.5.23'
-	testImplementation group: 'org.scalatest', name :'scalatest_2.12', version:'3.0.1'
-        testImplementation group: 'org.scalamock', name: 'scalamock_2.12', version: '4.4.0'
+        testImplementation group: 'junit', name: 'junit', version: '4.13'
+	    testImplementation group: 'com.typesafe.akka', name: 'akka-actor-testkit-typed_2.13', version: '2.6.4'
+	    testImplementation group: 'org.scalatest', name :'scalatest_2.13', version:'3.1.1'
+        testImplementation group: 'org.scalatestplus', name: 'scalatestplus-mockito_2.13', version: '1.0.0-M2'
+        testImplementation group: 'org.scalatestplus', name: 'scalatestplus-junit_2.13', version: '1.0.0-M2'
+        testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.1.0'
+
         
     }
-    akkaGrpc {
-	language = "Scala"
-    }
+    
 }

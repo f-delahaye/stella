@@ -7,7 +7,7 @@ import akka.actor.testkit.typed.FishingOutcome
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import org.stella.brain.programs.LInternauteOverviewCrawler.{ProgramsLoadedFromCacheAdapted, RequestLInternautePrograms, RequestMode, SendLInternautePrograms, URLStreamProvider}
@@ -15,7 +15,7 @@ import org.stella.brain.programs.LInternauteOverviewCrawler.{ProgramsLoadedFromC
 import scala.concurrent.duration._
 
 @RunWith(classOf[JUnitRunner])
-class LInternateOverviewCrawlerSpec extends ScalaTestWithActorTestKit with WordSpecLike with MockitoSugar {
+class LInternateOverviewCrawlerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike with MockitoSugar {
 
   implicit val actorSystem = testKit.system
   val date = LocalDate.of(2020, 1, 1)

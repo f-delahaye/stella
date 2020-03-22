@@ -6,7 +6,7 @@ import akka.actor.testkit.typed.Effect.{MessageAdapter, Spawned}
 import akka.actor.testkit.typed.scaladsl.{BehaviorTestKit, ScalaTestWithActorTestKit, TestInbox}
 import akka.actor.typed.eventstream.EventStream
 import org.junit.runner.RunWith
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import org.stella.brain.programs.ClassifiedProgramManager.ClassifiedProgramManagerMessage
@@ -15,7 +15,7 @@ import org.stella.brain.programs.ProgramController.ProgramsByDateAdapted
 import org.stella.brain.programs.UntrainedProgramManager.{UntrainedProgramManagerMessage, UntrainedProgramsNotification}
 
 @RunWith(classOf[JUnitRunner])
-class ProgramControllerSpec extends ScalaTestWithActorTestKit with WordSpecLike  with MockitoSugar {
+class ProgramControllerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike  with MockitoSugar {
 
   "program controller" must {
 

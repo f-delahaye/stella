@@ -26,7 +26,7 @@ object ProgramMain {
       val programClassifier = context.spawn(ProgramClassifier(), "ProgramClassifier")
       val untrainedProgramManager = context.spawn(UntrainedProgramManager(), "UntrainedProgramManager")
       val classifiedProgramManager = context.spawn(ClassifiedProgramManager(), "ClassifiedProgramManager")
-      val programCache = context.spawn(ProgramCache(), "ProgramCache")
+      val programCache = context.spawn(ProgramCache("LInternaute"), "ProgramCacheLInternaute")
       val programController = context.spawn(ProgramController(programClassifier, untrainedProgramManager, classifiedProgramManager, context.system.eventStream, programCache), "ProgramController")
 
       val programsNotificationSink = context.spawn(ProgramsNotificationSink(programClassifier), "programsNotificationSink")

@@ -5,7 +5,7 @@ import akka.actor.typed.eventstream.EventStream
 import akka.actor.typed.eventstream.EventStream.Publish
 import akka.stream.scaladsl.Sink
 import org.junit.runner.RunWith
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.junit.JUnitRunner
 import org.stella.brain.programs.UntrainedProgramManager.{UntrainedPrograms, UntrainedProgramsNotification}
 
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 // this test requires eventBus, an ActorSource, not sure this may be done with synchronous style
 // https://doc.akka.io/docs/akka/current/typed/testing-sync.html
 @RunWith(classOf[JUnitRunner])
-class ProgramMainSpec extends ScalaTestWithActorTestKit with WordSpecLike {
+class ProgramMainSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
   implicit val actorSystem = testKit.system
 

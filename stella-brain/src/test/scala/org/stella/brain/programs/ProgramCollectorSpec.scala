@@ -5,13 +5,13 @@ import java.time.{LocalDate, LocalDateTime}
 import akka.actor.testkit.typed.Effect.{MessageAdapter, Spawned}
 import akka.actor.testkit.typed.scaladsl.{BehaviorTestKit, ScalaTestWithActorTestKit, TestInbox}
 import org.junit.runner.RunWith
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import org.stella.brain.programs.ProgramCollector.ProgramsByDate
 
 @RunWith(classOf[JUnitRunner])
-class ProgramCollectorSpec extends ScalaTestWithActorTestKit("akka.persistence.journal.plugin = \"akka.persistence.journal.inmem\"") with WordSpecLike  with MockitoSugar {
+class ProgramCollectorSpec extends ScalaTestWithActorTestKit("akka.persistence.journal.plugin = \"akka.persistence.journal.inmem\"") with AnyWordSpecLike  with MockitoSugar {
 
   "program collector" must {
     val programCache = TestInbox[ProgramCache.Command]()

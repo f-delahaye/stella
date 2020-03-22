@@ -1,3 +1,3 @@
 rootProject.name = 'stella'
-include 'stella-rest-shared', 'stella-rest-bridge', 'stella-ai'
+include 'stella-brain', 'stella-test-client'
 
